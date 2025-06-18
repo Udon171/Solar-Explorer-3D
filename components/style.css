@@ -342,3 +342,20 @@ select, input[type="date"] {
 .status-indicator.critical {
     background-color: var(--danger-color);
 }
+
+/* Add trajectory styles */
+.trajectory-line {
+    stroke-width: 2;
+    fill: none;
+}
+
+.trajectory-line.planned {
+    stroke: var(--primary-color);
+    stroke-dasharray: 5,5;
+    opacity: 0.6;
+}
+
+.trajectory-line.active {
+    stroke: var(--success-color);
+    opacity: 0.8;
+}

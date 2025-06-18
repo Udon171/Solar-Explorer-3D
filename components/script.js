@@ -177,23 +177,52 @@ const MISSION_PARAMETERS = {
     }
 };
 
+const orbitalMechanics = new OrbitalMechanics();
+
 function initializeSatellite(transfer) {
     const satellite = viz.createObject('satellite', {
         ephem: new Spacekit.Ephem({
             epoch: 2458600.5,
             a: transfer.semiMajorAxis,
-            e: transfer.deltaV1 / 30, // Simplified elliptical orbit
+            e: transfer.deltaV1 / 30,
             i: 0,
             om: 0,
             w: 0,
             ma: 0,
         }, 'deg'),
         labelText: 'Satellite',
-        radius: 0.001, // Small visible size
-        color: 0x00ff00
+        radius: 0.001,
+        color: 0x00ff00,
+        // Add trajectory visualization
+        orbit: {
+            display: true,
+            color: 0x44ff44,
+            width: 1
+        }
+    });
+
+    // Add transfer orbit visualization
+    viz.createObject('transfer-orbit', {
+        ephem: new Spacekit.Ephem({
+            epoch: 2458600.5,
+            a: transfer.semiMajorAxis,
+            e: transfer.deltaV1 / 30,
+            i: 0,
+            om: 0,
+            w: 0,
+            ma: 0,
+        }, 'deg'),
+        hideObject: true,
+        orbit: {
+            display: true,
+            color: 0x4444ff,
+            width: 1,
+            style: 'dashed'
+        }
     });
 
     gameState.satellite = satellite;
+    gameState.transferStartTime = Date.now();
     return satellite;
 }
 
@@ -201,9 +230,84 @@ function animate() {
     requestAnimationFrame(animate);
     viz.update();
 
-    if (gameManager.gameState.missionActive) {
+    if (gameState.missionActive) {
+        updateSatellitePosition();
         gameManager.updateGameState();
         updateMissionStatus();
+    }
+}
+
+// Add new function for updating satellite position
+function updateSatellitePosition() {
+    const mission = gameState.currentMission;
+    if (!mission || !gameState.satellite) return;
+
+    const elapsedTime = (Date.now() - gameState.transferStartTime) / 1000;
+    const transferProgress = elapsedTime / (mission.transfer.transferTime * 86400);
+    
+    // Calculate mean anomaly based on progress
+    const meanAnomaly = transferProgress * 2 * Math.PI;
+    
+    // Get position from orbital mechanics
+    const pos = orbitalMechanics.getOrbitalPosition(
+        mission.transfer.semiMajorAxis,
+        mission.transfer.deltaV1 / 30,
+        meanAnomaly
+    );
+
+    // Update satellite position
+    gameState.satellite.setPosition(pos);
+}
+
+function visualizeTrajectory(transfer, startPlanet, targetPlanet) {
+    const points = calculateTrajectoryPoints(transfer);
+    
+    // Create trajectory line
+    const material = new THREE.LineDashedMaterial({
+        color: 0x44ff44,
+        linewidth: 1,
+        scale: 1,
+        dashSize: 3,
+        gapSize: 1,
+    });
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geometry, material);
+    line.computeLineDistances();
+    
+    viz.scene.add(line);
+    return line;
+}
+
+function calculateTrajectoryPoints(transfer) {
+    const points = [];
+    const steps = 100;
+    
+    for (let i = 0; i <= steps; i++) {
+        const progress = i / steps;
+        const meanAnomaly = progress * 2 * Math.PI;
+        
+        const pos = orbitalMechanics.getOrbitalPosition({
+            semiMajorAxis: transfer.semiMajorAxis,
+            eccentricity: transfer.eccentricity,
+            meanAnomaly: meanAnomaly
+        }, 0);
+        
+        points.push(new THREE.Vector3(pos.x, pos.y, pos.z));
+    }
+    
+    return points;
+}
+
+function updateTrajectoryVisualization(trajectory, progress) {
+    const material = trajectory.material;
+    material.dashSize = 3 * (1 - progress);
+    material.gapSize = 1 + 2 * progress;
+    material.needsUpdate = true;
+    
+    // Add particle effects at satellite position
+    if (progress > 0) {
+        addExhaustParticles(gameState.satellite.getPosition());
     }
 }
 
