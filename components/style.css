@@ -1,0 +1,245 @@
+/* styles.css */
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --background-dark: #1a1a1a;
+    --text-light: #ffffff;
+    --text-dark: #333333;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: var(--background-dark);
+    color: var(--text-light);
+}
+
+.game-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.mission-control {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+select, input[type="date"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+}
+
+.instruments-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.instrument-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.launch-btn {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.launch-btn:hover {
+    background-color: #0056b3;
+}
+
+.simulation-container {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1 / 3;
+}
+
+#simulation {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+.simulation-controls {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#mission-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 1rem;
+    border-radius: 4px;
+    min-width: 200px;
+}
+
+.instrument-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.instrument-data {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.instrument-data img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+
+#pause-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#pause-btn:hover {
+    background-color: #0056b3;
+}
+
+#simulation-speed {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+#simulation-speed::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#speed-value {
+    min-width: 40px;
+    text-align: center;
+}
+
+.simulation-controls button,
+.simulation-controls input {
+    transition: all 0.3s ease;
+}
+
+.instruments-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.instrument-stats {
+    display: flex;
+    gap: 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.9em;
+    color: var(--secondary-color);
+}
+
+.camera-view {
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.image-placeholder {
+    background: rgba(0, 0, 0, 0.3);
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.camera-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.camera-controls button {
+    padding: 0.3rem 0.8rem;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    color: var(--text-light);
+    cursor: pointer;
+}
+
+.graph-placeholder {
+    height: 150px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
