@@ -3,7 +3,9 @@ class InstrumentView {
         this.instruments = {
             camera: new CameraInstrument(),
             spectrometer: new SpectrometerInstrument(),
-            radar: new RadarInstrument()
+            radar: new RadarInstrument(),
+            gravitometer: new GravitometerInstrument(),
+            multiSpectral: new MultiSpectralInstrument()
         };
         
         this.activeInstrument = null;
@@ -179,5 +181,214 @@ class RadarInstrument extends BaseInstrument {
             this.scanAngle = 0;
         }
         this.render();
+    }
+}
+
+class GravitometerInstrument extends BaseInstrument {
+    initialize(planet) {
+        this.planet = planet;
+        this.data = PLANET_DATA[planet].gravity;
+        this.anomalyPoints = [];
+        this.scanAngle = 0;
+        this.generateGravityData();
+    }
+
+    generateGravityData() {
+        // Generate simulated gravity anomalies
+        const baseGravity = parseFloat(this.data);
+        for (let i = 0; i < 5; i++) {
+            this.anomalyPoints.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                strength: (Math.random() - 0.5) * 0.5 * baseGravity,
+                radius: Math.random() * 50 + 20
+            });
+        }
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw gravity heat map
+        const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+        
+        for (let x = 0; x < this.canvas.width; x++) {
+            for (let y = 0; y < this.canvas.height; y++) {
+                const gravity = this.calculateGravityAt(x, y);
+                const color = this.getGravityColor(gravity);
+                const idx = (y * this.canvas.width + x) * 4;
+                
+                imageData.data[idx] = color.r;
+                imageData.data[idx + 1] = color.g;
+                imageData.data[idx + 2] = color.b;
+                imageData.data[idx + 3] = 255;
+            }
+        }
+        
+        this.ctx.putImageData(imageData, 0, 0);
+        
+        // Draw scanning line
+        this.ctx.strokeStyle = '#00ff00';
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.scanAngle * this.canvas.height);
+        this.ctx.lineTo(this.canvas.width, this.scanAngle * this.canvas.height);
+        this.ctx.stroke();
+    }
+
+    calculateGravityAt(x, y) {
+        let totalGravity = parseFloat(this.data);
+        
+        this.anomalyPoints.forEach(point => {
+            const distance = Math.sqrt(
+                Math.pow(x - point.x, 2) + 
+                Math.pow(y - point.y, 2)
+            );
+            if (distance < point.radius) {
+                totalGravity += point.strength * (1 - distance/point.radius);
+            }
+        });
+        
+        return totalGravity;
+    }
+
+    getGravityColor(gravity) {
+        const baseGravity = parseFloat(this.data);
+        const variation = (gravity - baseGravity) / baseGravity;
+        
+        if (variation > 0) {
+            return {
+                r: 255 * variation,
+                g: 100 * variation,
+                b: 0
+            };
+        } else {
+            return {
+                r: 0,
+                g: 100 * -variation,
+                b: 255 * -variation
+            };
+        }
+    }
+
+    update(deltaTime) {
+        this.scanAngle += deltaTime * 0.1;
+        if (this.scanAngle > 1) this.scanAngle = 0;
+        this.render();
+    }
+}
+
+class MultiSpectralInstrument extends BaseInstrument {
+    initialize(planet) {
+        this.planet = planet;
+        this.bands = ['visible', 'infrared', 'ultraviolet', 'thermal'];
+        this.currentBand = 'visible';
+        this.data = PLANET_DATA[planet];
+        this.generateSpectralData();
+    }
+
+    generateSpectralData() {
+        this.spectralData = {
+            visible: {
+                image: `/assets/textures/${this.planet}.jpg`,
+                features: this.data.surfaceFeatures
+            },
+            infrared: {
+                temperature: this.data.temperature,
+                hotspots: this.generateHotspots()
+            },
+            ultraviolet: {
+                atmosphere: this.data.atmosphere,
+                radiation: this.generateRadiationLevels()
+            },
+            thermal: {
+                tempRange: this.generateTemperatureRange()
+            }
+        };
+    }
+
+    generateHotspots() {
+        return Array(3).fill(0).map(() => ({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            temp: Math.random() * 100 + 200
+        }));
+    }
+
+    generateRadiationLevels() {
+        return Array(5).fill(0).map(() => ({
+            level: Math.random() * 100,
+            type: ['alpha', 'beta', 'gamma'][Math.floor(Math.random() * 3)]
+        }));
+    }
+
+    generateTemperatureRange() {
+        const baseTemp = parseInt(this.data.temperature);
+        return {
+            min: baseTemp - 20,
+            max: baseTemp + 20,
+            current: baseTemp
+        };
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        switch(this.currentBand) {
+            case 'visible':
+                this.renderVisibleSpectrum();
+                break;
+            case 'infrared':
+                this.renderInfraredSpectrum();
+                break;
+            case 'ultraviolet':
+                this.renderUltravioletSpectrum();
+                break;
+            case 'thermal':
+                this.renderThermalSpectrum();
+                break;
+        }
+    }
+
+    renderVisibleSpectrum() {
+        const img = new Image();
+        img.src = this.spectralData.visible.image;
+        img.onload = () => {
+            this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+        };
+    }
+
+    renderInfraredSpectrum() {
+        // Create infrared heat map
+        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
+        gradient.addColorStop(0, 'blue');
+        gradient.addColorStop(0.5, 'yellow');
+        gradient.addColorStop(1, 'red');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw hotspots
+        this.spectralData.infrared.hotspots.forEach(spot => {
+            const gradient = this.ctx.createRadialGradient(
+                spot.x, spot.y, 0,
+                spot.x, spot.y, 50
+            );
+            gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        });
+    }
+
+    update(deltaTime) {
+        this.render();
+    }
+
+    switchBand(band) {
+        if (this.bands.includes(band)) {
+            this.currentBand = band;
+            this.render();
+        }
     }
 }

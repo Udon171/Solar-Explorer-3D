@@ -137,6 +137,18 @@ const INSTRUMENT_CONFIG = {
         powerUsage: 12,
         dataRate: 15,
         description: 'Maps surface topology'
+    },
+    gravitometer: {
+        name: 'High-Precision Gravitometer',
+        powerUsage: 15,
+        dataRate: 8,
+        description: 'Measures gravitational fields and anomalies'
+    },
+    multiSpectral: {
+        name: 'Multi-Spectral Imager',
+        powerUsage: 20,
+        dataRate: 25,
+        description: 'Captures data across multiple wavelength bands'
     }
 };
 
@@ -381,6 +393,7 @@ function activateInstruments(planet, instruments) {
 
 const instrumentVisualizer = new InstrumentVisualizer();
 
+// Update the generateInstrumentData function
 function generateInstrumentData(instrument, planet, data) {
     switch(instrument) {
         case 'camera':
@@ -412,6 +425,32 @@ function generateInstrumentData(instrument, planet, data) {
                             `<li>${feature}</li>`
                         ).join('')}
                     </ul>
+                </div>
+            `;
+        case 'gravitometer':
+            return `
+                <div class="gravitometer-data">
+                    <h4>Gravity Analysis</h4>
+                    <p>Base Gravity: ${data.gravity}</p>
+                    <div id="gravitometer-canvas" class="visualization-canvas"></div>
+                    <div class="gravity-legend">
+                        <span class="low">Low</span>
+                        <div class="gradient"></div>
+                        <span class="high">High</span>
+                    </div>
+                </div>
+            `;
+        case 'multiSpectral':
+            return `
+                <div class="multispectral-data">
+                    <h4>Multi-Spectral Analysis</h4>
+                    <div id="multispectral-canvas" class="visualization-canvas"></div>
+                    <div class="band-controls">
+                        <button onclick="switchSpectralBand('visible')">Visible</button>
+                        <button onclick="switchSpectralBand('infrared')">Infrared</button>
+                        <button onclick="switchSpectralBand('ultraviolet')">UV</button>
+                        <button onclick="switchSpectralBand('thermal')">Thermal</button>
+                    </div>
                 </div>
             `;
     }

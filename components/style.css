@@ -406,3 +406,37 @@ select, input[type="date"] {
     stroke: var(--success-color);
     opacity: 0.8;
 }
+
+.gravity-legend {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.gravity-legend .gradient {
+    flex: 1;
+    height: 20px;
+    background: linear-gradient(to right, blue, green, yellow, red);
+    border-radius: 4px;
+}
+
+.band-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.band-controls button {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    color: var(--text-light);
+    cursor: pointer;
+}
+
+.band-controls button:hover {
+    background: var(--secondary-color);
+}
