@@ -198,14 +198,11 @@ function initializeSatellite(transfer) {
 }
 
 function animate() {
-    if (!gameState.missionActive) return;
-
     requestAnimationFrame(animate);
     viz.update();
 
-    // Update mission progress
-    if (gameState.currentMission) {
-        gameState.currentMission.elapsedTime += gameState.simulationSpeed / 60; // 60 fps
+    if (gameManager.gameState.missionActive) {
+        gameManager.updateGameState();
         updateMissionStatus();
     }
 }
@@ -274,15 +271,15 @@ function activateInstruments(planet, instruments) {
     content.innerHTML = instrumentHTML;
 }
 
+const instrumentVisualizer = new InstrumentVisualizer();
+
 function generateInstrumentData(instrument, planet, data) {
     switch(instrument) {
         case 'camera':
             return `
                 <div class="camera-view">
-                    <div class="image-placeholder">
-                        Surface image loading...
-                        <!-- Will be replaced with actual image when textures are ready -->
-                    </div>
+                    <img src="/assets/textures/${planet}.jpg" alt="${planet} surface" 
+                        class="planet-image" onerror="this.src='/assets/placeholder.jpg'">
                     <div class="camera-controls">
                         <button onclick="zoomInstrument('in')">Zoom In</button>
                         <button onclick="zoomInstrument('out')">Zoom Out</button>
@@ -294,28 +291,36 @@ function generateInstrumentData(instrument, planet, data) {
                 <div class="spectrometer-data">
                     <h4>Atmospheric Composition</h4>
                     <p>${data.atmosphere}</p>
-                    <div class="graph-placeholder">
-                        Spectrographic analysis graph
-                    </div>
+                    <div id="spectrometer-canvas" class="visualization-canvas"></div>
                 </div>
             `;
         case 'radar':
             return `
                 <div class="radar-data">
                     <h4>Surface Features</h4>
-                    <ul>
+                    <div id="radar-canvas" class="visualization-canvas"></div>
+                    <ul class="features-list">
                         ${data.surfaceFeatures.map(feature => 
                             `<li>${feature}</li>`
                         ).join('')}
                     </ul>
-                    <p>Surface Temperature: ${data.temperature}</p>
-                    <p>Surface Gravity: ${data.gravity}</p>
                 </div>
             `;
     }
 }
 
-// Add zoom functionality
+function initializeInstrumentVisuals(planet, instruments) {
+    if (instruments.includes('spectrometer')) {
+        instrumentVisualizer.initializeCanvas('spectrometer-canvas');
+        instrumentVisualizer.drawSpectrometer(PLANET_DATA[planet].atmosphere);
+    }
+    
+    if (instruments.includes('radar')) {
+        instrumentVisualizer.initializeCanvas('radar-canvas');
+        instrumentVisualizer.drawRadarMap(PLANET_DATA[planet].surfaceFeatures);
+    }
+}
+
 function zoomInstrument(direction) {
     const view = document.querySelector('.camera-view');
     const currentZoom = parseInt(view.dataset.zoom || 100);
@@ -332,10 +337,13 @@ function createStatusElement() {
 }
 
 function startMission() {
-    gameState.missionActive = true;
-    gameState.resources.fuel -= MISSION_PARAMETERS[gameState.currentMission.target].fuelRequirement;
+    gameManager.gameState.missionActive = true;
+    gameManager.gameState.resources = {
+        fuel: 100,
+        power: 100,
+        dataCollected: 0
+    };
     animate();
-    updateUI();
 }
 
 function initializeControls() {
