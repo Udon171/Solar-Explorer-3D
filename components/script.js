@@ -62,6 +62,10 @@ document.getElementById('mission-form').addEventListener('submit', (e) => {
     // Initialize satellite
     initializeSatellite(transfer);
     startMission();
+
+    if (instruments.length > 0) {
+        instrumentView.activate(instruments[0], planet);
+    }
 });
 
 function calculateHohmannTransfer(startPlanet, endPlanet) {
@@ -483,3 +487,69 @@ function updateUI() {
         <p>Elapsed Time: ${Math.floor(mission.elapsedTime)} days</p>
     `;
 }
+
+// Add after existing imports
+const instrumentView = new InstrumentView();
+
+// Modify the mission form event listener
+document.getElementById('mission-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const planet = document.getElementById('planet-select').value;
+    const instruments = [];
+    if (document.getElementById('camera').checked) instruments.push('camera');
+    if (document.getElementById('spectrometer').checked) instruments.push('spectrometer');
+    if (document.getElementById('radar').checked) instruments.push('radar');
+    
+    if (instruments.length === 0) {
+        alert('Please select at least one instrument');
+        return;
+    }
+
+    const launchDate = new Date(document.getElementById('launch-date').value);
+    const transfer = calculateHohmannTransfer('earth', planet);
+    const phaseAngle = calculatePhaseAngle(planet, transfer.transferTime);
+
+    // Validate launch window
+    const params = MISSION_PARAMETERS[planet];
+    if (phaseAngle < params.minPhaseAngle || phaseAngle > params.maxPhaseAngle) {
+        alert(`Invalid launch window. Phase angle must be between ${params.minPhaseAngle}° and ${params.maxPhaseAngle}°`);
+        return;
+    }
+
+    // Check resources
+    if (gameState.resources.fuel < params.fuelRequirement) {
+        alert('Insufficient fuel for this mission');
+        return;
+    }
+
+    // Create mission
+    gameState.currentMission = {
+        target: planet,
+        instruments,
+        transfer,
+        startDate: launchDate,
+        elapsedTime: 0
+    };
+
+    // Initialize satellite
+    initializeSatellite(transfer);
+    startMission();
+
+    if (instruments.length > 0) {
+        instrumentView.activate(instruments[0], planet);
+    }
+});
+
+// Add instrument switching
+document.addEventListener('keypress', (e) => {
+    if (!gameState.currentMission) return;
+    
+    const instruments = gameState.currentMission.instruments;
+    if (e.key === '1' && instruments.includes('camera')) {
+        instrumentView.activate('camera', gameState.currentMission.target);
+    } else if (e.key === '2' && instruments.includes('spectrometer')) {
+        instrumentView.activate('spectrometer', gameState.currentMission.target);
+    } else if (e.key === '3' && instruments.includes('radar')) {
+        instrumentView.activate('radar', gameState.currentMission.target);
+    }
+});

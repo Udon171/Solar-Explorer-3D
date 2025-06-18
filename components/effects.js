@@ -42,6 +42,75 @@ class VisualEffects {
         this.scene.add(particles);
     }
 
+    addPlaneChangeEffect(position) {
+        const particleCount = 100;
+        const ringGeometry = new THREE.BufferGeometry();
+        const ringMaterial = new THREE.PointsMaterial({
+            size: 0.005,
+            color: 0xff00ff,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+
+        const positions = new Float32Array(particleCount * 3);
+        const radius = 0.05;
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const offset = i * 3;
+            positions[offset] = position.x + Math.cos(angle) * radius;
+            positions[offset + 1] = position.y + Math.sin(angle) * radius;
+            positions[offset + 2] = position.z;
+        }
+
+        ringGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const ring = new THREE.Points(ringGeometry, ringMaterial);
+        
+        this.particles.push({
+            mesh: ring,
+            life: 2.0,
+            type: 'planeChange'
+        });
+
+        this.scene.add(ring);
+    }
+
+    addGravityAssistEffect(position, planet) {
+        // Create spiral effect around planet
+        const spiralCount = 50;
+        const spiralGeometry = new THREE.BufferGeometry();
+        const spiralMaterial = new THREE.LineBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.5
+        });
+
+        const points = [];
+        const radius = 0.1;
+        const turns = 2;
+
+        for (let i = 0; i <= spiralCount; i++) {
+            const t = (i / spiralCount) * turns * Math.PI * 2;
+            const r = radius * (1 - i / spiralCount);
+            points.push(new THREE.Vector3(
+                position.x + r * Math.cos(t),
+                position.y + r * Math.sin(t),
+                position.z
+            ));
+        }
+
+        spiralGeometry.setFromPoints(points);
+        const spiral = new THREE.Line(spiralGeometry, spiralMaterial);
+        
+        this.particles.push({
+            mesh: spiral,
+            life: 3.0,
+            type: 'gravityAssist'
+        });
+
+        this.scene.add(spiral);
+    }
+
     update(deltaTime) {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const particle = this.particles[i];

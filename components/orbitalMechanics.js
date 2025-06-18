@@ -163,4 +163,132 @@ class OrbitalMechanics {
         const T2 = this.planets[planet2].period;
         return (T1 * T2) / Math.abs(T1 - T2); // Synodic period
     }
+
+    calculateGravityAssist(spacecraft, planet, approachVelocity) {
+        const planet_data = this.planets[planet];
+        const mu = this.constants.G * planet_data.mass;
+        
+        // Calculate hyperbolic excess velocity
+        const v_inf = Math.sqrt(
+            Math.pow(approachVelocity.x, 2) + 
+            Math.pow(approachVelocity.y, 2) + 
+            Math.pow(approachVelocity.z, 2)
+        );
+        
+        // Calculate minimum approach distance (adding safety margin)
+        const r_p = planet_data.radius * 1.1;
+        
+        // Calculate bend angle
+        const delta = 2 * Math.asin(1 / (1 + (r_p * v_inf * v_inf) / mu));
+        
+        // Calculate velocity change
+        const deltaV = 2 * v_inf * Math.sin(delta / 2);
+        
+        return {
+            bendAngle: delta * (180 / Math.PI),
+            velocityChange: deltaV,
+            periapsisRadius: r_p,
+            timeOfFlyby: (2 * r_p) / v_inf, // Approximate flyby duration
+            energyGain: 0.5 * spacecraft.mass * (Math.pow(v_inf + deltaV, 2) - Math.pow(v_inf, 2))
+        };
+    }
+
+    planGravityAssistTrajectory(startPlanet, assistPlanet, targetPlanet) {
+        const firstLeg = this.calculateHohmannTransfer(startPlanet, assistPlanet);
+        const approachVel = this.calculateApproachVelocity(firstLeg);
+        const assist = this.calculateGravityAssist(
+            { mass: 1000 }, // Spacecraft mass in kg
+            assistPlanet,
+            approachVel
+        );
+        const secondLeg = this.calculateHohmannTransfer(assistPlanet, targetPlanet);
+        
+        return {
+            totalDeltaV: firstLeg.totalDeltaV + assist.velocityChange + secondLeg.deltaV2,
+            trajectory: [firstLeg, assist, secondLeg]
+        };
+    }
+
+    calculateApproachVelocity(transfer) {
+        const mu = this.constants.G * this.constants.SUN_MASS;
+        const v1 = Math.sqrt(mu / transfer.orbitParameters.perihelion);
+        const v2 = Math.sqrt(mu / transfer.orbitParameters.aphelion);
+        
+        return {
+            x: v1,
+            y: 0,
+            z: -v2
+        };
+   }
+
+    calculateInclinationChange(orbit, targetInclination) {
+        const v_orbit = Math.sqrt(
+            this.constants.G * this.constants.SUN_MASS / orbit.semiMajorAxis
+        );
+        
+        // Calculate angle between orbital planes
+        const deltaI = Math.abs(orbit.inclination - targetInclination);
+        
+        // Calculate delta-v required for inclination change
+        const deltaV = 2 * v_orbit * Math.sin(deltaI / 2);
+        
+        // Calculate optimal points for plane change
+        const nodeAngle = Math.atan2(
+            Math.sin(orbit.longitude) * Math.cos(targetInclination),
+            Math.cos(orbit.longitude)
+        );
+        
+        return {
+            deltaV,
+            optimalPoint: {
+                trueAnomaly: nodeAngle,
+                meanAnomaly: this.trueToMeanAnomaly(nodeAngle, orbit.eccentricity)
+            },
+            energyCost: 0.5 * deltaV * deltaV,
+            planeChangeAngle: deltaI
+        };
+    }
+
+    combinedTransferWithInclination(startPlanet, targetPlanet) {
+        const basicTransfer = this.calculateHohmannTransfer(startPlanet, targetPlanet);
+        const inclinationChange = this.calculateInclinationChange(
+            {
+                semiMajorAxis: basicTransfer.semiMajorAxis,
+                inclination: this.planets[startPlanet].inclination,
+                longitude: 0,
+                eccentricity: basicTransfer.eccentricity
+            },
+            this.planets[targetPlanet].inclination
+        );
+        
+        // Calculate optimal combined maneuver
+        const combinedDeltaV = Math.sqrt(
+            Math.pow(basicTransfer.deltaV1, 2) + 
+            Math.pow(inclinationChange.deltaV, 2)
+        );
+        
+        return {
+            transfer: basicTransfer,
+            planeChange: inclinationChange,
+            combinedDeltaV,
+            totalEnergyCost: basicTransfer.energyCost + inclinationChange.energyCost,
+            optimalSequence: [
+                {
+                    type: 'Transfer Injection',
+                    deltaV: basicTransfer.deltaV1,
+                    time: 0
+                },
+                {
+                    type: 'Plane Change',
+                    deltaV: inclinationChange.deltaV,
+                    time: basicTransfer.transferTime * 0.5 // Mid-transfer plane change
+                },
+                {
+                    type: 'Orbit Insertion',
+                    deltaV: basicTransfer.deltaV2,
+                    time: basicTransfer.transferTime
+                }
+            ]
+        };
+    }
 }

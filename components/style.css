@@ -134,6 +134,53 @@ select, input[type="date"] {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.instrument-view {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40vh;
+    background: rgba(0, 0, 0, 0.9);
+    border-top: 2px solid var(--primary-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.instrument-view.active {
+    transform: translateY(0);
+}
+
+.instrument-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.instrument-display {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 20, 0, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.instrument-display canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.instrument-data {
+    width: 200px;
+    padding: 1rem;
+    background: rgba(0, 20, 0, 0.3);
+    border-left: 1px solid var(--primary-color);
+}
+
 .instrument-data {
     margin-bottom: 1rem;
     padding: 1rem;
