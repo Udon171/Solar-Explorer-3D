@@ -1,3 +1,5 @@
+import { MissionManager } from './missionManager.js';
+
 class GameManager {
     constructor() {
         this.missionManager = new MissionManager();
@@ -64,9 +66,9 @@ class GameManager {
 
         const resources = this.gameState.resources;
         const fuelStatus = resources.fuel < 20 ? 'critical' : 
-                          resources.fuel < 40 ? 'warning' : 'normal';
+                            resources.fuel < 40 ? 'warning' : 'normal';
         const powerStatus = resources.power < 20 ? 'critical' : 
-                           resources.power < 40 ? 'warning' : 'normal';
+                            resources.power < 40 ? 'warning' : 'normal';
 
         statusDiv.innerHTML = `
             <h3>Mission Status</h3>
@@ -83,3 +85,5 @@ class GameManager {
         `;
     }
 }
+
+export { GameManager };

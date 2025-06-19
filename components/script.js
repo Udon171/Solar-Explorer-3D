@@ -1,15 +1,23 @@
 // script.js
+// Import modular classes
+import { GameManager } from './gameManager.js';
+import { OrbitalMechanics } from './orbitalMechanics.js';
+import { InstrumentView } from './instrumentView.js';
+import { MissionManager } from './missionManager.js'; // Will fix typo soon
+import { fetchEphemeris, HORIZONS_BODY_IDS } from './data/horizonsApi.js';
+import { PLANET_DATA } from './data/planetData.js';
+import { INSTRUMENT_CONFIG } from './data/instrumentConfig.js';
+
+// Initialize core modules
+const gameManager = new GameManager();
+const orbitalMechanics = new OrbitalMechanics();
+const instrumentView = new InstrumentView();
+const missionManager = new MissionManager();
+
 // Initialize Spacekit.js visualization
 const viz = new Spacekit.Simulation(document.getElementById('simulation'), {
     basePath: 'https://typpo.github.io/spacekit/build',
-    jd: 2458600.5, // Julian date for simulation start
-    textureLoader: new Spacekit.SpriteTextureLoader({
-    sunTexture: '/assets/textures/sun.jpg',
-    mercuryTexture: '/assets/textures/mercury.jpg',
-    venusTexture: '/assets/textures/venus.jpg',
-    earthTexture: '/assets/textures/earth.jpg',
-    marsTexture: '/assets/textures/mars.jpg',
-}),
+    jd: 2458600.5 // Julian date for simulation start
 });
 
 // Add Sun and planets
@@ -20,89 +28,58 @@ viz.createObject('mars', Spacekit.SpaceObjectPresets.MARS);
 // Add more planets as needed
 
 // Mission planning form
-document.getElementById('mission-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const planet = document.getElementById('planet-select').value;
-    const instruments = [];
-    if (document.getElementById('camera').checked) instruments.push('camera');
-    if (document.getElementById('spectrometer').checked) instruments.push('spectrometer');
-    if (document.getElementById('radar').checked) instruments.push('radar');
-    
-    if (instruments.length === 0) {
-        alert('Please select at least one instrument');
-        return;
-    }
+const missionForm = document.getElementById('mission-form');
+if (missionForm) {
+    missionForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const planet = document.getElementById('planet-select').value;
+        const instruments = [];
+        if (document.getElementById('camera').checked) instruments.push('camera');
+        if (document.getElementById('spectrometer').checked) instruments.push('spectrometer');
+        if (document.getElementById('radar').checked) instruments.push('radar');
+        
+        if (instruments.length === 0) {
+            alert('Please select at least one instrument');
+            return;
+        }
 
-    const launchDate = new Date(document.getElementById('launch-date').value);
-    const transfer = calculateHohmannTransfer('earth', planet);
-    const phaseAngle = calculatePhaseAngle(planet, transfer.transferTime);
+        const launchDate = new Date(document.getElementById('launch-date').value);
+        const transfer = orbitalMechanics.calculateHohmannTransfer('earth', planet);
+        const phaseAngle = calculatePhaseAngle(planet, transfer.transferTime);
 
-    // Validate launch window
-    const params = MISSION_PARAMETERS[planet];
-    if (phaseAngle < params.minPhaseAngle || phaseAngle > params.maxPhaseAngle) {
-        alert(`Invalid launch window. Phase angle must be between ${params.minPhaseAngle}° and ${params.maxPhaseAngle}°`);
-        return;
-    }
+        // Validate launch window
+        const params = MISSION_PARAMETERS[planet];
+        if (phaseAngle < params.minPhaseAngle || phaseAngle > params.maxPhaseAngle) {
+            alert(`Invalid launch window. Phase angle must be between ${params.minPhaseAngle}° and ${params.maxPhaseAngle}°`);
+            return;
+        }
 
-    // Check resources
-    if (gameState.resources.fuel < params.fuelRequirement) {
-        alert('Insufficient fuel for this mission');
-        return;
-    }
+        // Check resources
+        if (gameState.resources.fuel < params.fuelRequirement) {
+            alert('Insufficient fuel for this mission');
+            return;
+        }
 
-    // Create mission
-    gameState.currentMission = {
-        target: planet,
-        instruments,
-        transfer,
-        startDate: launchDate,
-        elapsedTime: 0
-    };
+        // Create mission
+        gameState.currentMission = {
+            target: planet,
+            instruments,
+            transfer,
+            startDate: launchDate,
+            elapsedTime: 0
+        };
 
-    // Initialize satellite
-    initializeSatellite(transfer);
-    startMission();
+        // Initialize satellite
+        initializeSatellite(transfer);
+        startMission();
 
-    if (instruments.length > 0) {
-        instrumentView.activate(instruments[0], planet);
-    }
-});
+        if (instruments.length > 0) {
+            instrumentView.activate(instruments[0], planet);
+        }
 
-function calculateHohmannTransfer(startPlanet, endPlanet) {
-    const planetData = {
-    earth: { a: 1.0 },
-    mars: { a: 1.524 },
-    venus: { a: 0.723 },
-    // Add more planets
-    };
-    const a1 = planetData[startPlanet].a;
-    const a2 = planetData[endPlanet].a;
-    const a_transfer = (a1 + a2) / 2;
-    const transferTime = 0.5 * Math.sqrt(Math.pow(a_transfer, 3));
-    const deltaV1 = Math.sqrt(1 / a1) * (Math.sqrt((2 * a2) / (a1 + a2)) - 1);
-    const deltaV2 = Math.sqrt(1 / a2) * (1 - Math.sqrt((2 * a1) / (a1 + a2)));
-    return { semiMajorAxis: a_transfer, transferTime, deltaV1, deltaV2 };
-}
-
-function calculatePhaseAngle(planet, transferTime) {
-    const planetData = {
-    mars: { period: Math.sqrt(Math.pow(1.524, 3)) },
-    venus: { period: Math.sqrt(Math.pow(0.723, 3)) },
-    };
-    const n_f = 360 / planetData[planet].period;
-    let phaseAngle = (180 - n_f * transferTime) % 360;
-    if (phaseAngle < 0) phaseAngle += 360;
-    return phaseAngle;
-}
-
-function startSimulation(transfer, instruments, planet) {
-  // Update simulation loop to track satellite position
-  // When near planet, show instrument view
-    document.getElementById('instrument-view').style.display = 'block';
-    const content = document.getElementById('instrument-content');
-  // Load assets based on instruments and planet
-    content.innerHTML = `<p>Viewing ${planet} with ${instruments.join(', ')}</p>`;
-  // Add image/data rendering logic
+        // After mission is created and started:
+        saveMissionProgress();
+    });
 }
 
 // Load assets
@@ -117,54 +94,6 @@ const assets = {
     spectrometer: '96.5% CO₂, 3.5% N₂',
     radar: 'Maxwell Montes',
 },
-};
-
-const INSTRUMENT_CONFIG = {
-    camera: {
-        name: 'High Resolution Camera',
-        powerUsage: 5,
-        dataRate: 10,
-        description: 'Captures detailed surface images'
-    },
-    spectrometer: {
-        name: 'Mass Spectrometer',
-        powerUsage: 8,
-        dataRate: 5,
-        description: 'Analyzes atmospheric composition'
-    },
-    radar: {
-        name: 'Surface Radar',
-        powerUsage: 12,
-        dataRate: 15,
-        description: 'Maps surface topology'
-    },
-    gravitometer: {
-        name: 'High-Precision Gravitometer',
-        powerUsage: 15,
-        dataRate: 8,
-        description: 'Measures gravitational fields and anomalies'
-    },
-    multiSpectral: {
-        name: 'Multi-Spectral Imager',
-        powerUsage: 20,
-        dataRate: 25,
-        description: 'Captures data across multiple wavelength bands'
-    }
-};
-
-const PLANET_DATA = {
-    mars: {
-        atmosphere: '95.3% CO₂, 2.7% N₂, 1.6% Ar',
-        surfaceFeatures: ['Olympus Mons', 'Valles Marineris', 'Hellas Planitia'],
-        temperature: '-63°C (average)',
-        gravity: '3.72 m/s²'
-    },
-    venus: {
-        atmosphere: '96.5% CO₂, 3.5% N₂',
-        surfaceFeatures: ['Maxwell Montes', 'Ishtar Terra', 'Aphrodite Terra'],
-        temperature: '462°C (average)',
-        gravity: '8.87 m/s²'
-    }
 };
 
 const gameState = {
@@ -193,64 +122,25 @@ const MISSION_PARAMETERS = {
     }
 };
 
-const orbitalMechanics = new OrbitalMechanics();
-
-function initializeSatellite(transfer) {
-    const satellite = viz.createObject('satellite', {
-        ephem: new Spacekit.Ephem({
-            epoch: 2458600.5,
-            a: transfer.semiMajorAxis,
-            e: transfer.deltaV1 / 30,
-            i: 0,
-            om: 0,
-            w: 0,
-            ma: 0,
-        }, 'deg'),
-        labelText: 'Satellite',
-        radius: 0.001,
-        color: 0x00ff00,
-        // Add trajectory visualization
-        orbit: {
-            display: true,
-            color: 0x44ff44,
-            width: 1
-        }
-    });
-
-    // Add transfer orbit visualization
-    viz.createObject('transfer-orbit', {
-        ephem: new Spacekit.Ephem({
-            epoch: 2458600.5,
-            a: transfer.semiMajorAxis,
-            e: transfer.deltaV1 / 30,
-            i: 0,
-            om: 0,
-            w: 0,
-            ma: 0,
-        }, 'deg'),
-        hideObject: true,
-        orbit: {
-            display: true,
-            color: 0x4444ff,
-            width: 1,
-            style: 'dashed'
-        }
-    });
-
-    gameState.satellite = satellite;
-    gameState.transferStartTime = Date.now();
-    return satellite;
+function calculatePhaseAngle(planet, transferTime) {
+    const planetData = {
+    mars: { period: Math.sqrt(Math.pow(1.524, 3)) },
+    venus: { period: Math.sqrt(Math.pow(0.723, 3)) },
+    };
+    const n_f = 360 / planetData[planet].period;
+    let phaseAngle = (180 - n_f * transferTime) % 360;
+    if (phaseAngle < 0) phaseAngle += 360;
+    return phaseAngle;
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    viz.update();
-
-    if (gameState.missionActive) {
-        updateSatellitePosition();
-        gameManager.updateGameState();
-        updateMissionStatus();
-    }
+function startSimulation(transfer, instruments, planet) {
+  // Update simulation loop to track satellite position
+  // When near planet, show instrument view
+    document.getElementById('instrument-view').style.display = 'block';
+    const content = document.getElementById('instrument-content');
+  // Load assets based on instruments and planet
+    content.innerHTML = `<p>Viewing ${planet} with ${instruments.join(', ')}</p>`;
+  // Add image/data rendering logic
 }
 
 // Add new function for updating satellite position
@@ -391,6 +281,18 @@ function activateInstruments(planet, instruments) {
     content.innerHTML = instrumentHTML;
 }
 
+class InstrumentVisualizer {
+    initializeCanvas(id) {
+        // Stub: No-op
+    }
+    drawSpectrometer(atmosphere) {
+        // Stub: No-op
+    }
+    drawRadarMap(surfaceFeatures) {
+        // Stub: No-op
+    }
+}
+
 const instrumentVisualizer = new InstrumentVisualizer();
 
 // Update the generateInstrumentData function
@@ -493,102 +395,240 @@ function startMission() {
     animate();
 }
 
-function initializeControls() {
-    const pauseBtn = document.getElementById('pause-btn');
-    const speedControl = document.getElementById('simulation-speed');
-    const speedValue = document.getElementById('speed-value');
+function animate() {
+    requestAnimationFrame(animate);
+    viz.update();
 
-    pauseBtn.addEventListener('click', () => {
-        gameState.missionActive = !gameState.missionActive;
-        pauseBtn.textContent = gameState.missionActive ? 'Pause' : 'Resume';
-        if (gameState.missionActive) {
-            animate();
-        }
-    });
-
-    speedControl.addEventListener('input', (e) => {
-        gameState.simulationSpeed = parseInt(e.target.value);
-        speedValue.textContent = `${gameState.simulationSpeed}x`;
-    });
+    if (gameState.missionActive) {
+        updateSatellitePosition();
+        gameManager.updateGameState();
+        updateMissionStatus();
+    }
 }
 
-function updateUI() {
-    const statusDiv = document.getElementById('mission-status');
-    if (!statusDiv) return;
-
-    const mission = gameState.currentMission;
-    statusDiv.innerHTML = `
-        <h3>Mission Status</h3>
-        <p>Target: ${mission.target}</p>
-        <p>Instruments: ${mission.instruments.join(', ')}</p>
-        <p>Fuel: ${gameState.resources.fuel}%</p>
-        <p>Power: ${gameState.resources.power}%</p>
-        <p>Elapsed Time: ${Math.floor(mission.elapsedTime)} days</p>
+// --- Loading Screen Implementation ---
+function createLoadingScreen() {
+    if (document.getElementById('loading-screen')) return;
+    const loadingScreen = document.createElement('div');
+    loadingScreen.id = 'loading-screen';
+    loadingScreen.innerHTML = `
+        <div id="loading-logo">Solar System Odyssey</div>
+        <div id="loading-message">Loading simulation, please wait...</div>
+        <div id="loading-bar-container">
+            <div id="loading-bar"></div>
+        </div>
+        <div id="loading-notifications"></div>
     `;
+    loadingScreen.style.position = 'fixed';
+    loadingScreen.style.top = 0;
+    loadingScreen.style.left = 0;
+    loadingScreen.style.width = '100vw';
+    loadingScreen.style.height = '100vh';
+    loadingScreen.style.background = 'linear-gradient(135deg, #b2fefa 0%, #0ed2f7 100%)';
+    loadingScreen.style.display = 'flex';
+    loadingScreen.style.flexDirection = 'column';
+    loadingScreen.style.justifyContent = 'center';
+    loadingScreen.style.alignItems = 'center';
+    loadingScreen.style.zIndex = 9999;
+    loadingScreen.style.transition = 'opacity 0.6s';
+    document.body.appendChild(loadingScreen);
 }
 
-// Add after existing imports
-const instrumentView = new InstrumentView();
+function setLoadingProgress(percent) {
+    const bar = document.getElementById('loading-bar');
+    if (bar) bar.style.width = `${percent}%`;
+}
 
-// Modify the mission form event listener
-document.getElementById('mission-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const planet = document.getElementById('planet-select').value;
-    const instruments = [];
-    if (document.getElementById('camera').checked) instruments.push('camera');
-    if (document.getElementById('spectrometer').checked) instruments.push('spectrometer');
-    if (document.getElementById('radar').checked) instruments.push('radar');
-    
-    if (instruments.length === 0) {
-        alert('Please select at least one instrument');
-        return;
+function setLoadingMessage(msg) {
+    const message = document.getElementById('loading-message');
+    if (message) message.textContent = msg;
+}
+
+function addLoadingNotification(text) {
+    const container = document.getElementById('loading-notifications');
+    if (container) {
+        const note = document.createElement('div');
+        note.className = 'loading-notification';
+        note.textContent = text;
+        container.appendChild(note);
     }
+    console.warn('[Loading Notice]', text);
+}
 
-    const launchDate = new Date(document.getElementById('launch-date').value);
-    const transfer = calculateHohmannTransfer('earth', planet);
-    const phaseAngle = calculatePhaseAngle(planet, transfer.transferTime);
-
-    // Validate launch window
-    const params = MISSION_PARAMETERS[planet];
-    if (phaseAngle < params.minPhaseAngle || phaseAngle > params.maxPhaseAngle) {
-        alert(`Invalid launch window. Phase angle must be between ${params.minPhaseAngle}° and ${params.maxPhaseAngle}°`);
-        return;
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => loadingScreen.remove(), 600);
     }
+}
 
-    // Check resources
-    if (gameState.resources.fuel < params.fuelRequirement) {
-        alert('Insufficient fuel for this mission');
-        return;
+// Show loading screen on DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {
+    createLoadingScreen();
+    setLoadingProgress(10);
+    setLoadingMessage('Initializing engine...');
+    setTimeout(() => {
+        setLoadingProgress(40);
+        setLoadingMessage('Loading assets...');
+        setTimeout(() => {
+            setLoadingProgress(70);
+            setLoadingMessage('Setting up simulation...');
+            setTimeout(() => {
+                setLoadingProgress(100);
+                setLoadingMessage('Ready!');
+                setTimeout(hideLoadingScreen, 600);
+            }, 600);
+        }, 600);
+    }, 600);
+});
+// --- End Loading Screen Implementation ---
+
+// Add browser compatibility and asset loading checks to loading screen
+function checkBrowserIssues() {
+    // Check for WebGL support
+    const canvas = document.createElement('canvas');
+    const webgl = !!(window.WebGLRenderingContext && (
+        canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    if (!webgl) {
+        addLoadingNotification('WebGL is not supported in your browser. The simulation may not run.');
     }
-
-    // Create mission
-    gameState.currentMission = {
-        target: planet,
-        instruments,
-        transfer,
-        startDate: launchDate,
-        elapsedTime: 0
-    };
-
-    // Initialize satellite
-    initializeSatellite(transfer);
-    startMission();
-
-    if (instruments.length > 0) {
-        instrumentView.activate(instruments[0], planet);
+    // Check for localStorage support
+    try {
+        localStorage.setItem('__test__', '1');
+        localStorage.removeItem('__test__');
+    } catch (e) {
+        addLoadingNotification('localStorage is not available. Progress will not be saved.');
     }
+    // Check for Spacekit.js loaded
+    if (!window.Spacekit) {
+        addLoadingNotification('Spacekit.js not loaded! Please check your CDN or network connection.');
+    }
+    // Check for major assets (e.g., placeholder image)
+    const img = new window.Image();
+    img.onerror = () => addLoadingNotification('Critical asset missing: /assets/textures/placeholder.jpg');
+    img.src = '/assets/textures/placeholder.jpg';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    // ...existing code...
+    checkBrowserIssues();
 });
 
-// Add instrument switching
-document.addEventListener('keypress', (e) => {
-    if (!gameState.currentMission) return;
-    
-    const instruments = gameState.currentMission.instruments;
-    if (e.key === '1' && instruments.includes('camera')) {
-        instrumentView.activate('camera', gameState.currentMission.target);
-    } else if (e.key === '2' && instruments.includes('spectrometer')) {
-        instrumentView.activate('spectrometer', gameState.currentMission.target);
-    } else if (e.key === '3' && instruments.includes('radar')) {
-        instrumentView.activate('radar', gameState.currentMission.target);
+// Example: Fetch and use real planetary positions at mission planning
+async function getPlanetEphemeris(planet, startDate, stopDate) {
+    try {
+        const bodyId = HORIZONS_BODY_IDS[planet];
+        if (!bodyId) throw new Error('Unknown planet for Horizons API');
+        const data = await fetchEphemeris(bodyId, startDate, stopDate, '1d');
+        // Use data.result or data['vectors'] as needed
+        return data;
+    } catch (e) {
+        addLoadingNotification(`Horizons API error: ${e.message}`);
+        return null;
+    }
+}
+
+// Save mission progress to localStorage
+function saveMissionProgress() {
+    try {
+        localStorage.setItem('missionProgress', JSON.stringify(gameManager.gameState));
+    } catch (e) {
+        addLoadingNotification('Failed to save mission progress.');
+    }
+}
+
+// Load mission progress from localStorage
+function loadMissionProgress() {
+    const saved = localStorage.getItem('missionProgress');
+    if (saved) {
+        try {
+            const state = JSON.parse(saved);
+            Object.assign(gameManager.gameState, state);
+            // Optionally, re-initialize satellite and UI
+            addLoadingNotification('Mission progress loaded.');
+        } catch (e) {
+            addLoadingNotification('Failed to load mission progress.');
+        }
+    }
+}
+
+// Save after major actions
+// Example: after mission planning, simulation step, or milestone
+// saveMissionProgress();
+
+// Load on game start
+window.addEventListener('DOMContentLoaded', loadMissionProgress);
+
+// Add a manual save/load option to the UI (optional)
+function addSaveLoadButtons() {
+    const controls = document.querySelector('.simulation-controls');
+    if (!controls) return;
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Progress';
+    saveBtn.onclick = saveMissionProgress;
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent = 'Load Progress';
+    loadBtn.onclick = loadMissionProgress;
+    controls.appendChild(saveBtn);
+    controls.appendChild(loadBtn);
+}
+window.addEventListener('DOMContentLoaded', addSaveLoadButtons);
+
+// Add glassmorphism styles for UI polish
+// This should be moved to style.css, but here is a quick style injection for demo
+const glassStyle = document.createElement('style');
+glassStyle.textContent = `
+.instrument-panel, .mission-control, .simulation-controls, .speed-control {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+body {
+    background: linear-gradient(135deg, #b2fefa 0%, #0ed2f7 100%);
+}
+button, input, select {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    padding: 0.5em 1em;
+    margin: 0.2em;
+    font-size: 1em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: background 0.2s;
+}
+button:hover, input:focus, select:focus {
+    background: rgba(255,255,255,0.35);
+}
+`;
+document.head.appendChild(glassStyle);
+
+// Tab switching logic for new UI
+window.addEventListener('DOMContentLoaded', () => {
+    const satTab = document.getElementById('satellite-tab');
+    const missionTab = document.getElementById('mission-tab');
+    const satOptions = document.getElementById('sat-options');
+    const missionOptions = document.getElementById('mission-options');
+    if (satTab && missionTab && satOptions && missionOptions) {
+        satTab.onclick = () => {
+            satTab.classList.add('active');
+            missionTab.classList.remove('active');
+            satOptions.style.display = '';
+            missionOptions.style.display = 'none';
+        };
+        missionTab.onclick = () => {
+            missionTab.classList.add('active');
+            satTab.classList.remove('active');
+            missionOptions.style.display = '';
+            satOptions.style.display = 'none';
+        };
+        // Default: show satellite options
+        satOptions.style.display = '';
+        missionOptions.style.display = 'none';
     }
 });

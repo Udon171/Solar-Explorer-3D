@@ -219,7 +219,7 @@ class OrbitalMechanics {
             y: 0,
             z: -v2
         };
-   }
+    }
 
     calculateInclinationChange(orbit, targetInclination) {
         const v_orbit = Math.sqrt(
@@ -292,3 +292,5 @@ class OrbitalMechanics {
         };
     }
 }
+
+export { OrbitalMechanics };

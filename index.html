@@ -4,11 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar Explorer 3D</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="components/style.css">
     <script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
 </head>
 <body>
     <div class="game-container">
+        <div class="top-bar">
+            <button class="tab active" id="satellite-tab">Satellite</button>
+            <button class="tab" id="mission-tab">Mission</button>
+        </div>
+        <div class="centerpiece">
+            <img src="assets/textures/placeholder.jpg" alt="Satellite" class="satellite-image" id="satellite-image">
+            <div class="options-panel">
+                <div class="panel" id="sat-options">
+                    <h3>Satellite Options</h3>
+                    <!-- Satellite config options go here -->
+                </div>
+                <div class="panel" id="mission-options">
+                    <h3>Mission Options</h3>
+                    <!-- Mission config options go here -->
+                </div>
+            </div>
+        </div>
         <div class="mission-control">
             <h2>Mission Control</h2>
             <form id="mission-form">
@@ -17,6 +34,14 @@
                     <select id="planet-select" required>
                         <option value="mars">Mars</option>
                         <option value="venus">Venus</option>
+                        <option value="mercury">Mercury</option>
+                        <option value="earth">Earth</option>
+                        <option value="jupiter">Jupiter</option>
+                        <option value="saturn">Saturn</option>
+                        <option value="uranus">Uranus</option>
+                        <option value="neptune">Neptune</option>
+                        <option value="dwarf_planets">Dwarf Planets</option>
+                        <option value="small_bodies">Small Bodies</option>
                     </select>
                 </div>
                 
@@ -72,6 +97,6 @@
             <div id="instrument-content"></div>
         </div>
     </div>
-    <script src="components/script.js"></script>
+    <script type="module" src="components/script.js"></script>
 </body>
 </html>
