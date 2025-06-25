@@ -905,50 +905,50 @@ function showInstrumentOutput(planet, inst) {
 }
 
 function initThreeJS() {
-  const container = document.getElementById('simulation');
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setClearColor(0x181a1b, 1);
-  container.innerHTML = '';
-  container.appendChild(renderer.domElement);
+    const container = document.getElementById('simulation');
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x181a1b, 1);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
 
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(0, 0, 6);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 6);
 
-  const light = new THREE.DirectionalLight(0xffffff, 1.2);
-  light.position.set(5, 10, 7);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x888888, 1.1));
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(5, 10, 7);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x888888, 1.1));
 
-  animate();
+    animate();
 }
 
 function animate() {
-  requestAnimationFrame(animate);
-  if (currentModel) {
+    requestAnimationFrame(animate);
+    if (currentModel) {
     currentModel.rotation.y += 0.005;
-  }
-  renderer.render(scene, camera);
+    }
+    renderer.render(scene, camera);
 }
 
 function loadSatelliteModel(name) {
-  selectedSatellite = name;
-  const loader = new GLTFLoader();
-  const path = `assets/3D Assets/Satellites/${name}/${name}.glb`;
+    selectedSatellite = name;
+    const loader = new GLTFLoader();
+    const path = `assets/3d-assets/Satellites/${name}/${name}.glb`;
   // Remove previous model
-  if (currentModel) {
+    if (currentModel) {
     scene.remove(currentModel);
     currentModel.traverse(obj => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
         if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
         else obj.material.dispose();
-      }
+        }
     });
     currentModel = null;
-  }
-  loader.load(path, (gltf) => {
+    }
+    loader.load(path, (gltf) => {
     currentModel = gltf.scene;
     // Center and scale model
     let box = new THREE.Box3().setFromObject(currentModel);
@@ -965,61 +965,61 @@ function loadSatelliteModel(name) {
     // Remove any previous error overlay
     const errDiv = document.getElementById('satellite-model-error');
     if (errDiv) errDiv.remove();
-  }, undefined, (err) => {
+    }, undefined, (err) => {
     console.error('Failed to load model:', path, err);
     // Show error overlay in simulation view
     let errDiv = document.getElementById('satellite-model-error');
     if (!errDiv) {
-      errDiv = document.createElement('div');
-      errDiv.id = 'satellite-model-error';
-      errDiv.style.position = 'absolute';
-      errDiv.style.top = '0';
-      errDiv.style.left = '0';
-      errDiv.style.width = '100%';
-      errDiv.style.height = '100%';
-      errDiv.style.background = 'rgba(30,30,40,0.92)';
-      errDiv.style.display = 'flex';
-      errDiv.style.flexDirection = 'column';
-      errDiv.style.alignItems = 'center';
-      errDiv.style.justifyContent = 'center';
-      errDiv.style.zIndex = 1000;
-      errDiv.style.color = '#ff6666';
-      errDiv.style.fontSize = '1.2em';
-      errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${path}</code><br>${err.message || err}`;
-      const container = document.getElementById('simulation');
-      if (container) container.appendChild(errDiv);
+        errDiv = document.createElement('div');
+        errDiv.id = 'satellite-model-error';
+        errDiv.style.position = 'absolute';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.height = '100%';
+        errDiv.style.background = 'rgba(30,30,40,0.92)';
+        errDiv.style.display = 'flex';
+        errDiv.style.flexDirection = 'column';
+        errDiv.style.alignItems = 'center';
+        errDiv.style.justifyContent = 'center';
+        errDiv.style.zIndex = 1000;
+        errDiv.style.color = '#ff6666';
+        errDiv.style.fontSize = '1.2em';
+        errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${path}</code><br>${err.message || err}`;
+        const container = document.getElementById('simulation');
+        if (container) container.appendChild(errDiv);
     }
-  });
+});
 }
 
 // --- Mission Scene ---
 function renderMissionScene(prefs) {
   // Render satellite floating with Earth in mission view
-  const container = document.querySelector('#mission-page .mission-svg-container');
-  if (!container) return;
-  container.innerHTML = '<div id="mission-canvas" style="width:100%;height:600px;position:relative;"></div>';
-  const missionDiv = document.getElementById('mission-canvas');
+    const container = document.querySelector('#mission-page .mission-svg-container');
+    if (!container) return;
+    container.innerHTML = '<div id="mission-canvas" style="width:100%;height:600px;position:relative;"></div>';
+    const missionDiv = document.getElementById('mission-canvas');
   // Setup Three.js scene
-  const renderer2 = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer2.setSize(missionDiv.clientWidth, 600);
-  renderer2.setClearColor(0x000000, 1);
-  missionDiv.appendChild(renderer2.domElement);
-  const scene2 = new THREE.Scene();
-  const camera2 = new THREE.PerspectiveCamera(45, missionDiv.clientWidth / 600, 0.1, 1000);
-  camera2.position.set(0, 0, 8);
+    const renderer2 = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer2.setSize(missionDiv.clientWidth, 600);
+    renderer2.setClearColor(0x000000, 1);
+    missionDiv.appendChild(renderer2.domElement);
+    const scene2 = new THREE.Scene();
+    const camera2 = new THREE.PerspectiveCamera(45, missionDiv.clientWidth / 600, 0.1, 1000);
+    camera2.position.set(0, 0, 8);
   // Earth sphere
-  const texLoader = new THREE.TextureLoader();
-  const earthTex = texLoader.load('assets/textures/earth/earth.jpg');
-  const earth = new THREE.Mesh(
+    const texLoader = new THREE.TextureLoader();
+    const earthTex = texLoader.load('assets/textures/earth/earth.jpg');
+    const earth = new THREE.Mesh(
     new THREE.SphereGeometry(2.5, 64, 64),
     new THREE.MeshPhongMaterial({ map: earthTex })
-  );
-  earth.position.set(-2.5, 0, 0);
-  scene2.add(earth);
+    );
+    earth.position.set(-2.5, 0, 0);
+    scene2.add(earth);
   // Satellite
-  const loader2 = new GLTFLoader();
-  const satPath = `assets/3D Assets/Satellites/${prefs.satellite}/${prefs.satellite}.glb`;
-  loader2.load(satPath, (gltf) => {
+    const loader2 = new GLTFLoader();
+    const satPath = `assets/3d-assets/Satellites/${prefs.satellite}/${prefs.satellite}.glb`;
+    loader2.load(satPath, (gltf) => {
     const sat = gltf.scene;
     // Center and scale
     let box = new THREE.Box3().setFromObject(sat);
@@ -1039,49 +1039,49 @@ function renderMissionScene(prefs) {
     if (errDiv) errDiv.remove();
     // Animate
     function animateMission() {
-      requestAnimationFrame(animateMission);
-      sat.rotation.y += 0.01;
-      earth.rotation.y += 0.002;
-      renderer2.render(scene2, camera2);
+        requestAnimationFrame(animateMission);
+        sat.rotation.y += 0.01;
+        earth.rotation.y += 0.002;
+        renderer2.render(scene2, camera2);
     }
     animateMission();
-  }, undefined, (err) => {
+    }, undefined, (err) => {
     console.error('Failed to load mission model:', satPath, err);
     // Show error overlay in mission view
     let errDiv = document.getElementById('mission-model-error');
     if (!errDiv) {
-      errDiv = document.createElement('div');
-      errDiv.id = 'mission-model-error';
-      errDiv.style.position = 'absolute';
-      errDiv.style.top = '0';
-      errDiv.style.left = '0';
-      errDiv.style.width = '100%';
-      errDiv.style.height = '100%';
-      errDiv.style.background = 'rgba(30,30,40,0.92)';
-      errDiv.style.display = 'flex';
-      errDiv.style.flexDirection = 'column';
-      errDiv.style.alignItems = 'center';
-      errDiv.style.justifyContent = 'center';
-      errDiv.style.zIndex = 1000;
-      errDiv.style.color = '#ff6666';
-      errDiv.style.fontSize = '1.2em';
-      errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${satPath}</code><br>${err.message || err}`;
-      missionDiv.appendChild(errDiv);
+        errDiv = document.createElement('div');
+        errDiv.id = 'mission-model-error';
+        errDiv.style.position = 'absolute';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.height = '100%';
+        errDiv.style.background = 'rgba(30,30,40,0.92)';
+        errDiv.style.display = 'flex';
+        errDiv.style.flexDirection = 'column';
+        errDiv.style.alignItems = 'center';
+        errDiv.style.justifyContent = 'center';
+        errDiv.style.zIndex = 1000;
+        errDiv.style.color = '#ff6666';
+        errDiv.style.fontSize = '1.2em';
+        errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${satPath}</code><br>${err.message || err}`;
+        missionDiv.appendChild(errDiv);
     }
-  });
+});
 }
 
 // --- Custom Calendar Logic ---
 function renderCustomCalendar(selectedDate) {
-  const calendarDiv = document.getElementById('custom-calendar');
-  if (!calendarDiv) return;
+    const calendarDiv = document.getElementById('custom-calendar');
+    if (!calendarDiv) return;
   // State
-  let today = new Date();
-  let year = selectedDate ? selectedDate.getFullYear() : today.getFullYear();
-  let month = selectedDate ? selectedDate.getMonth() : today.getMonth();
-  let selDay = selectedDate ? selectedDate.getDate() : null;
+    let today = new Date();
+    let year = selectedDate ? selectedDate.getFullYear() : today.getFullYear();
+    let month = selectedDate ? selectedDate.getMonth() : today.getMonth();
+    let selDay = selectedDate ? selectedDate.getDate() : null;
 
-  function updateCalendar(y, m, sel) {
+    function updateCalendar(y, m, sel) {
     calendarDiv.innerHTML = '';
     // Header
     const header = document.createElement('div');
@@ -1101,93 +1101,93 @@ function renderCustomCalendar(selectedDate) {
     const grid = document.createElement('div');
     grid.className = 'calendar-grid';
     weekdays.forEach(d => {
-      const wd = document.createElement('div');
-      wd.className = 'calendar-weekday';
-      wd.textContent = d;
-      grid.appendChild(wd);
+        const wd = document.createElement('div');
+        wd.className = 'calendar-weekday';
+        wd.textContent = d;
+        grid.appendChild(wd);
     });
     // Days
     const firstDay = new Date(y, m, 1).getDay();
     const daysInMonth = new Date(y, m+1, 0).getDate();
     for (let i = 0; i < firstDay; i++) {
-      const empty = document.createElement('div');
-      empty.className = 'calendar-day disabled';
-      grid.appendChild(empty);
+        const empty = document.createElement('div');
+        empty.className = 'calendar-day disabled';
+        grid.appendChild(empty);
     }
     for (let d = 1; d <= daysInMonth; d++) {
-      const day = document.createElement('div');
-      day.className = 'calendar-day';
-      day.textContent = d;
-      if (sel === d) day.classList.add('selected');
-      if (y === today.getFullYear() && m === today.getMonth() && d === today.getDate()) day.classList.add('today');
-      day.onclick = () => {
+        const day = document.createElement('div');
+        day.className = 'calendar-day';
+        day.textContent = d;
+        if (sel === d) day.classList.add('selected');
+        if (y === today.getFullYear() && m === today.getMonth() && d === today.getDate()) day.classList.add('today');
+        day.onclick = () => {
         updateCalendar(y, m, d);
         // Set selected date and show launch button
         const launchBtnContainer = document.getElementById('launch-btn-container');
         if (launchBtnContainer) {
-          launchBtnContainer.innerHTML = '<button class="launch-btn" id="launch-btn">Launch</button>';
-          document.getElementById('launch-btn').onclick = () => {
+            launchBtnContainer.innerHTML = '<button class="launch-btn" id="launch-btn">Launch</button>';
+            document.getElementById('launch-btn').onclick = () => {
             window.__missionPrefs = window.__missionPrefs || {};
             window.__missionPrefs.date = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             // Show loading overlay and launch as before
             let loadingOverlay = document.getElementById('loading-overlay');
             if (!loadingOverlay) {
-              loadingOverlay = document.createElement('div');
-              loadingOverlay.id = 'loading-overlay';
-              loadingOverlay.style.position = 'fixed';
-              loadingOverlay.style.top = 0;
-              loadingOverlay.style.left = 0;
-              loadingOverlay.style.width = '100vw';
-              loadingOverlay.style.height = '100vh';
-              loadingOverlay.style.background = 'rgba(20,22,24,0.85)';
-              loadingOverlay.style.display = 'flex';
-              loadingOverlay.style.alignItems = 'center';
-              loadingOverlay.style.justifyContent = 'center';
-              loadingOverlay.style.zIndex = 10000;
-              loadingOverlay.style.color = '#fff';
-              loadingOverlay.style.fontSize = '2em';
-              loadingOverlay.innerHTML = '<span>Preparing Mission...</span>';
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'loading-overlay';
+                loadingOverlay.style.position = 'fixed';
+                loadingOverlay.style.top = 0;
+                loadingOverlay.style.left = 0;
+                loadingOverlay.style.width = '100vw';
+                loadingOverlay.style.height = '100vh';
+                loadingOverlay.style.background = 'rgba(20,22,24,0.85)';
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.style.alignItems = 'center';
+                loadingOverlay.style.justifyContent = 'center';
+                loadingOverlay.style.zIndex = 10000;
+                loadingOverlay.style.color = '#fff';
+                loadingOverlay.style.fontSize = '2em';
+                loadingOverlay.innerHTML = '<span>Preparing Mission...</span>';
             }
             document.body.appendChild(loadingOverlay);
             setTimeout(() => {
-              document.getElementById('satellite-page').classList.add('hidden');
-              document.getElementById('mission-page').classList.remove('hidden');
-              const smToggle = document.getElementById('sm-toggle');
-              if (smToggle) smToggle.disabled = false;
-              missionLaunched = true;
-              if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
-              renderMissionScene(window.__missionPrefs);
+                document.getElementById('satellite-page').classList.add('hidden');
+                document.getElementById('mission-page').classList.remove('hidden');
+                const smToggle = document.getElementById('sm-toggle');
+                if (smToggle) smToggle.disabled = false;
+                missionLaunched = true;
+                if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+                renderMissionScene(window.__missionPrefs);
             }, 1200);
-          };
+            };
         }
-      };
-      grid.appendChild(day);
+        };
+        grid.appendChild(day);
     }
     calendarDiv.appendChild(grid);
     // Month navigation
     prevBtn.onclick = () => {
-      let newMonth = m - 1;
-      let newYear = y;
-      if (newMonth < 0) { newMonth = 11; newYear--; }
-      updateCalendar(newYear, newMonth, null);
-      const launchBtnContainer = document.getElementById('launch-btn-container');
-      if (launchBtnContainer) launchBtnContainer.innerHTML = '';
+        let newMonth = m - 1;
+        let newYear = y;
+        if (newMonth < 0) { newMonth = 11; newYear--; }
+        updateCalendar(newYear, newMonth, null);
+        const launchBtnContainer = document.getElementById('launch-btn-container');
+        if (launchBtnContainer) launchBtnContainer.innerHTML = '';
     };
     nextBtn.onclick = () => {
-      let newMonth = m + 1;
-      let newYear = y;
-      if (newMonth > 11) { newMonth = 0; newYear++; }
-      updateCalendar(newYear, newMonth, null);
-      const launchBtnContainer = document.getElementById('launch-btn-container');
-      if (launchBtnContainer) launchBtnContainer.innerHTML = '';
+        let newMonth = m + 1;
+        let newYear = y;
+        if (newMonth > 11) { newMonth = 0; newYear++; }
+        updateCalendar(newYear, newMonth, null);
+        const launchBtnContainer = document.getElementById('launch-btn-container');
+        if (launchBtnContainer) launchBtnContainer.innerHTML = '';
     };
-  }
-  updateCalendar(year, month, selDay);
+    }
+    updateCalendar(year, month, selDay);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   // ...existing code...
   // Custom calendar
-  renderCustomCalendar();
+    renderCustomCalendar();
   // ...existing code...
 });
