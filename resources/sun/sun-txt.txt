@@ -1,0 +1,8 @@
+The Sun is the star at the center of our solar system. It is a nearly perfect sphere of hot plasma, providing the light and energy necessary for life on Earth. The Sun is about 4.6 billion years old and is composed primarily of hydrogen and helium. Its gravity holds the solar system together, keeping planets, asteroids, and comets in orbit.
+
+Key Facts:
+- Diameter: ~1,391,000 km
+- Surface temperature: ~5,500°C
+- Distance from Earth: ~149.6 million km (1 AU)
+- Accounts for 99.86% of the solar system's mass
+- Energy source: Nuclear fusion (hydrogen to helium)

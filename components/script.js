@@ -7,6 +7,14 @@ import { MissionManager } from './missionManager.js'; // Will fix typo soon
 import { fetchEphemeris, HORIZONS_BODY_IDS } from './data/horizonsApi.js';
 import { PLANET_DATA } from './data/planetData.js';
 import { INSTRUMENT_CONFIG } from './data/instrumentConfig.js';
+import { initOrbitronica } from './orbitronica-init.js';
+import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
+
+let renderer, scene, camera, currentModel;
+let missionLaunched = false;
+let selectedSatellite = 'AcrimSAT';
+let selectedPlanet = 'Earth';
 
 // Initialize core modules
 const gameManager = new GameManager();
@@ -14,10 +22,9 @@ const orbitalMechanics = new OrbitalMechanics();
 const instrumentView = new InstrumentView();
 const missionManager = new MissionManager();
 
-// Initialize Spacekit.js visualization
-const viz = new Spacekit.Simulation(document.getElementById('simulation'), {
-    basePath: 'https://typpo.github.io/spacekit/build',
-    jd: 2458600.5 // Julian date for simulation start
+// Initialize Orbitronica/Three.js solar system scene
+window.addEventListener('DOMContentLoaded', () => {
+    initOrbitronica('simulation');
 });
 
 // Add Sun and planets
@@ -581,7 +588,7 @@ const glassStyle = document.createElement('style');
 glassStyle.textContent = `
 .instrument-panel, .mission-control, .simulation-controls, .speed-control {
     background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.37);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-radius: 16px;
@@ -631,4 +638,556 @@ window.addEventListener('DOMContentLoaded', () => {
         satOptions.style.display = '';
         missionOptions.style.display = 'none';
     }
+
+    // Add event listeners for new controls (placeholders)
+    document.getElementById('main-menu-btn')?.addEventListener('click', () => alert('Main Menu (not implemented)'));
+    document.getElementById('save-btn')?.addEventListener('click', saveMissionProgress);
+    document.getElementById('load-btn')?.addEventListener('click', loadMissionProgress);
+    document.getElementById('settings-btn')?.addEventListener('click', () => alert('Settings (not implemented)'));
+    document.getElementById('profile-btn')?.addEventListener('click', () => alert('Profile (not implemented)'));
+    document.getElementById('switch-view-btn')?.addEventListener('click', () => alert('Switch Sat/Mission (not implemented)'));
+    document.getElementById('viewport-btn')?.addEventListener('click', () => alert('3D Viewport/Swap (not implemented)'));
+    document.getElementById('pause-btn')?.addEventListener('click', () => alert('Pause/Resume (not implemented)'));
+    document.getElementById('camera-up-btn')?.addEventListener('click', () => alert('Camera Up (not implemented)'));
+    document.getElementById('camera-down-btn')?.addEventListener('click', () => alert('Camera Down (not implemented)'));
+    document.getElementById('activate-instrument-btn')?.addEventListener('click', () => alert('Activate Instrument (not implemented)'));
+});
+
+// Burger menu and S/M switch logic
+window.addEventListener('DOMContentLoaded', () => {
+    const burger = document.getElementById('main-menu-btn');
+    let menuOverlay = null;
+    if (burger) {
+        burger.onclick = (e) => {
+            e.stopPropagation();
+            if (document.querySelector('.menu-overlay')) return;
+            menuOverlay = document.createElement('div');
+            menuOverlay.className = 'menu-overlay';
+            menuOverlay.innerHTML = `
+                <div class='menu-modal'>
+                    <div class='menu-tabs'>
+                        <button class='menu-tab active' data-tab='exit'>Exit/Save</button>
+                        <button class='menu-tab' data-tab='load'>Load</button>
+                        <button class='menu-tab' data-tab='settings'>Settings</button>
+                        <button class='menu-tab' data-tab='profile'>Profile</button>
+                        <button class='menu-tab' data-tab='progress'>Progress</button>
+                    </div>
+                    <div class='menu-tab-content' id='menu-tab-exit'>
+                        <h2>Exit/Save</h2>
+                        <button onclick='window.location.reload()'>Exit & Save</button>
+                    </div>
+                    <div class='menu-tab-content hidden' id='menu-tab-load'>
+                        <h2>Load</h2>
+                        <button onclick='window.loadMissionProgress && window.loadMissionProgress()'>Load Progress</button>
+                    </div>
+                    <div class='menu-tab-content hidden' id='menu-tab-settings'>
+                        <h2>Settings</h2>
+                        <p>Settings coming soon.</p>
+                    </div>
+                    <div class='menu-tab-content hidden' id='menu-tab-profile'>
+                        <h2>Profile</h2>
+                        <p>Profile coming soon.</p>
+                    </div>
+                    <div class='menu-tab-content hidden' id='menu-tab-progress'>
+                        <h2>Progress</h2>
+                        <p>Progress coming soon.</p>
+                    </div>
+                    <button class='menu-close-btn' id='menu-close-btn'>Close</button>
+                </div>
+            `;
+            document.body.appendChild(menuOverlay);
+            // Tab switching logic
+            menuOverlay.querySelectorAll('.menu-tab').forEach(tab => {
+                tab.onclick = function(ev) {
+                    ev.stopPropagation();
+                    menuOverlay.querySelectorAll('.menu-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabName = this.getAttribute('data-tab');
+                    menuOverlay.querySelectorAll('.menu-tab-content').forEach(c => c.classList.add('hidden'));
+                    const content = menuOverlay.querySelector(`#menu-tab-${tabName}`);
+                    if (content) content.classList.remove('hidden');
+                };
+            });
+            // Close button
+            menuOverlay.querySelector('#menu-close-btn').onclick = function(ev) {
+                ev.stopPropagation();
+                menuOverlay.remove();
+            };
+            // Click outside modal closes menu
+            menuOverlay.onclick = function(ev) {
+                if (ev.target === menuOverlay) menuOverlay.remove();
+            };
+        };
+    }
+    // S/M switch logic
+    const smToggle = document.getElementById('sm-toggle');
+    const title = document.querySelector('.top-bar-title');
+    const satellitePage = document.getElementById('satellite-page');
+    const missionPage = document.getElementById('mission-page');
+    // Create loading overlay
+    let loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'loading-overlay';
+    loadingOverlay.style.position = 'fixed';
+    loadingOverlay.style.top = 0;
+    loadingOverlay.style.left = 0;
+    loadingOverlay.style.width = '100vw';
+    loadingOverlay.style.height = '100vh';
+    loadingOverlay.style.background = 'rgba(20,22,24,0.85)';
+    loadingOverlay.style.display = 'flex';
+    loadingOverlay.style.alignItems = 'center';
+    loadingOverlay.style.justifyContent = 'center';
+    loadingOverlay.style.zIndex = 10000;
+    loadingOverlay.style.color = '#fff';
+    loadingOverlay.style.fontSize = '2em';
+    loadingOverlay.innerHTML = '<span>Loading...</span>';
+
+    function showLoading() {
+      document.body.appendChild(loadingOverlay);
+    }
+    function hideLoading() {
+      if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+    }
+
+    if (smToggle && satellitePage && missionPage) {
+        smToggle.addEventListener('change', function() {
+            showLoading();
+            setTimeout(() => {
+                if (smToggle.checked) {
+                    satellitePage.classList.remove('hidden');
+                    missionPage.classList.add('hidden');
+                } else {
+                    satellitePage.classList.add('hidden');
+                    missionPage.classList.remove('hidden');
+                }
+                hideLoading();
+            }, 1000); // 1 second loading
+        });
+        // Initial state
+        if (smToggle.checked) {
+            satellitePage.classList.remove('hidden');
+            missionPage.classList.add('hidden');
+        } else {
+            satellitePage.classList.add('hidden');
+            missionPage.classList.remove('hidden');
+        }
+    }
+});
+
+// Mission and instrument logic integration for Orbitronica
+// Listen for planet selection and show mission/instrument UI
+window.addEventListener('planet-selected', async (e) => {
+    const planet = e.detail.planet;
+    // Fetch educational text
+    let txtPath = `resources/${planet}/${planet}-txt.txt`;
+    let text = '';
+    try {
+        const resp = await fetch(txtPath);
+        if (!resp.ok) throw new Error('Not found');
+        text = await resp.text();
+    } catch {
+        text = 'No educational info found for this planet.';
+    }
+    showPlanetInfoPanel(planet, text);
+    showMissionInstrumentPanel(planet);
+});
+
+function showMissionInstrumentPanel(planet) {
+    let panel = document.getElementById('mission-instrument-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'mission-instrument-panel';
+        panel.style.position = 'fixed';
+        panel.style.bottom = '40px';
+        panel.style.right = '40px';
+        panel.style.maxWidth = '400px';
+        panel.style.background = 'rgba(0,0,32,0.95)';
+        panel.style.color = '#fff';
+        panel.style.padding = '1.5em';
+        panel.style.borderRadius = '16px';
+        panel.style.zIndex = 10001;
+        panel.style.overflowY = 'auto';
+        panel.style.maxHeight = '60vh';
+        panel.style.boxShadow = '0 8px 32px 0 rgba(31,38,135,0.37)';
+        document.body.appendChild(panel);
+    }
+    panel.innerHTML = `
+        <h3 style='margin-top:0;text-transform:capitalize;'>Mission to ${planet}</h3>
+        <form id='mission-plan-form'>
+            <label>Choose Instruments:</label><br>
+            <label><input type='checkbox' name='instrument' value='camera'> Camera</label><br>
+            <label><input type='checkbox' name='instrument' value='spectrometer'> Spectrometer</label><br>
+            <label><input type='checkbox' name='instrument' value='radar'> Radar</label><br>
+            <label><input type='checkbox' name='instrument' value='gravitometer'> Gravitometer</label><br>
+            <label><input type='checkbox' name='instrument' value='multiSpectral'> Multi-Spectral Imager</label><br>
+            <label>Launch Date: <input type='date' name='launchDate' required></label><br>
+            <button type='submit' style='margin-top:1em;'>Plan Mission</button>
+        </form>
+        <div id='mission-feedback'></div>
+        <button style='margin-top:1em;' onclick='this.parentElement.remove()'>Close</button>
+    `;
+    document.getElementById('mission-plan-form').onsubmit = function(ev) {
+        ev.preventDefault();
+        const form = ev.target;
+        const instruments = Array.from(form.instrument).filter(i => i.checked).map(i => i.value);
+        const launchDate = form.launchDate.value;
+        if (instruments.length === 0) {
+            document.getElementById('mission-feedback').textContent = 'Select at least one instrument.';
+            return;
+        }
+        // Save mission state (simulate mission start)
+        window.currentMission = {
+            planet,
+            instruments,
+            launchDate,
+            started: true,
+            progress: 0,
+            completed: false
+        };
+        document.getElementById('mission-feedback').textContent = `Mission to ${planet} planned with: ${instruments.join(', ')}. Launch: ${launchDate}`;
+        // Show instrument panel for the mission
+        showInstrumentPanel(planet, instruments);
+    };
+}
+
+// Instrument panel logic
+function showInstrumentPanel(planet, instruments) {
+    let panel = document.getElementById('instrument-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'instrument-panel';
+        panel.style.position = 'fixed';
+        panel.style.left = '40px';
+        panel.style.bottom = '40px';
+        panel.style.maxWidth = '400px';
+        panel.style.background = 'rgba(0,0,32,0.95)';
+        panel.style.color = '#fff';
+        panel.style.padding = '1.5em';
+        panel.style.borderRadius = '16px';
+        panel.style.zIndex = 10002;
+        panel.style.overflowY = 'auto';
+        panel.style.maxHeight = '60vh';
+        panel.style.boxShadow = '0 8px 32px 0 rgba(31,38,135,0.37)';
+        document.body.appendChild(panel);
+    }
+    let html = `<h3 style='margin-top:0;text-transform:capitalize;'>Instruments on ${planet}</h3>`;
+    instruments.forEach(inst => {
+        html += `<button class='instrument-btn' data-inst='${inst}'>${inst.charAt(0).toUpperCase()+inst.slice(1)}</button> `;
+    });
+    html += `<div id='instrument-output' style='margin-top:1em;'></div>`;
+    html += `<button style='margin-top:1em;' onclick='this.parentElement.remove()'>Close</button>`;
+    panel.innerHTML = html;
+    // Add interactivity for instrument buttons
+    panel.querySelectorAll('.instrument-btn').forEach(btn => {
+        btn.onclick = function() {
+            const inst = this.getAttribute('data-inst');
+            showInstrumentOutput(planet, inst);
+        };
+    });
+}
+
+function showInstrumentOutput(planet, inst) {
+    const output = document.getElementById('instrument-output');
+    if (!output) return;
+    // Demo: show a fact or simulated data
+    if (inst === 'camera') {
+        output.innerHTML = `<img src='assets/textures/${planet}/${planet}-1.jpg' style='width:100%;border-radius:8px;' onerror="this.style.display='none'">`;
+    } else if (inst === 'spectrometer') {
+        output.innerHTML = `<div style='background:#222;padding:1em;border-radius:8px;'>Spectrometer reading: <br>Atmospheric composition data for ${planet}.</div>`;
+    } else if (inst === 'radar') {
+        output.innerHTML = `<div style='background:#222;padding:1em;border-radius:8px;'>Radar scan: <br>Surface topology visualization for ${planet}.</div>`;
+    } else if (inst === 'gravitometer') {
+        output.innerHTML = `<div style='background:#222;padding:1em;border-radius:8px;'>Gravitometer: <br>Gravity field data for ${planet}.</div>`;
+    } else if (inst === 'multiSpectral') {
+        output.innerHTML = `<div style='background:#222;padding:1em;border-radius:8px;'>Multi-Spectral Imager: <br>Band selection and analysis for ${planet}.</div>`;
+    } else {
+        output.textContent = 'Instrument not implemented.';
+    }
+}
+
+function initThreeJS() {
+  const container = document.getElementById('simulation');
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setClearColor(0x181a1b, 1);
+  container.innerHTML = '';
+  container.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(0, 0, 6);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1.2);
+  light.position.set(5, 10, 7);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x888888, 1.1));
+
+  animate();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (currentModel) {
+    currentModel.rotation.y += 0.005;
+  }
+  renderer.render(scene, camera);
+}
+
+function loadSatelliteModel(name) {
+  selectedSatellite = name;
+  const loader = new GLTFLoader();
+  const path = `assets/3D Assets/Satellites/${name}/${name}.glb`;
+  // Remove previous model
+  if (currentModel) {
+    scene.remove(currentModel);
+    currentModel.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+    currentModel = null;
+  }
+  loader.load(path, (gltf) => {
+    currentModel = gltf.scene;
+    // Center and scale model
+    let box = new THREE.Box3().setFromObject(currentModel);
+    let size = new THREE.Vector3();
+    box.getSize(size);
+    let maxDim = Math.max(size.x, size.y, size.z);
+    let scale = 2.5 / maxDim;
+    currentModel.scale.set(scale, scale, scale);
+    box = new THREE.Box3().setFromObject(currentModel);
+    let center = new THREE.Vector3();
+    box.getCenter(center);
+    currentModel.position.sub(center); // Center at origin
+    scene.add(currentModel);
+    // Remove any previous error overlay
+    const errDiv = document.getElementById('satellite-model-error');
+    if (errDiv) errDiv.remove();
+  }, undefined, (err) => {
+    console.error('Failed to load model:', path, err);
+    // Show error overlay in simulation view
+    let errDiv = document.getElementById('satellite-model-error');
+    if (!errDiv) {
+      errDiv = document.createElement('div');
+      errDiv.id = 'satellite-model-error';
+      errDiv.style.position = 'absolute';
+      errDiv.style.top = '0';
+      errDiv.style.left = '0';
+      errDiv.style.width = '100%';
+      errDiv.style.height = '100%';
+      errDiv.style.background = 'rgba(30,30,40,0.92)';
+      errDiv.style.display = 'flex';
+      errDiv.style.flexDirection = 'column';
+      errDiv.style.alignItems = 'center';
+      errDiv.style.justifyContent = 'center';
+      errDiv.style.zIndex = 1000;
+      errDiv.style.color = '#ff6666';
+      errDiv.style.fontSize = '1.2em';
+      errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${path}</code><br>${err.message || err}`;
+      const container = document.getElementById('simulation');
+      if (container) container.appendChild(errDiv);
+    }
+  });
+}
+
+// --- Mission Scene ---
+function renderMissionScene(prefs) {
+  // Render satellite floating with Earth in mission view
+  const container = document.querySelector('#mission-page .mission-svg-container');
+  if (!container) return;
+  container.innerHTML = '<div id="mission-canvas" style="width:100%;height:600px;position:relative;"></div>';
+  const missionDiv = document.getElementById('mission-canvas');
+  // Setup Three.js scene
+  const renderer2 = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer2.setSize(missionDiv.clientWidth, 600);
+  renderer2.setClearColor(0x000000, 1);
+  missionDiv.appendChild(renderer2.domElement);
+  const scene2 = new THREE.Scene();
+  const camera2 = new THREE.PerspectiveCamera(45, missionDiv.clientWidth / 600, 0.1, 1000);
+  camera2.position.set(0, 0, 8);
+  // Earth sphere
+  const texLoader = new THREE.TextureLoader();
+  const earthTex = texLoader.load('assets/textures/earth/earth.jpg');
+  const earth = new THREE.Mesh(
+    new THREE.SphereGeometry(2.5, 64, 64),
+    new THREE.MeshPhongMaterial({ map: earthTex })
+  );
+  earth.position.set(-2.5, 0, 0);
+  scene2.add(earth);
+  // Satellite
+  const loader2 = new GLTFLoader();
+  const satPath = `assets/3D Assets/Satellites/${prefs.satellite}/${prefs.satellite}.glb`;
+  loader2.load(satPath, (gltf) => {
+    const sat = gltf.scene;
+    // Center and scale
+    let box = new THREE.Box3().setFromObject(sat);
+    let size = new THREE.Vector3();
+    box.getSize(size);
+    let maxDim = Math.max(size.x, size.y, size.z);
+    let scale = 1.5 / maxDim;
+    sat.scale.set(scale, scale, scale);
+    box = new THREE.Box3().setFromObject(sat);
+    let center = new THREE.Vector3();
+    box.getCenter(center);
+    sat.position.sub(center);
+    sat.position.x = 2.5;
+    scene2.add(sat);
+    // Remove any previous error overlay
+    const errDiv = document.getElementById('mission-model-error');
+    if (errDiv) errDiv.remove();
+    // Animate
+    function animateMission() {
+      requestAnimationFrame(animateMission);
+      sat.rotation.y += 0.01;
+      earth.rotation.y += 0.002;
+      renderer2.render(scene2, camera2);
+    }
+    animateMission();
+  }, undefined, (err) => {
+    console.error('Failed to load mission model:', satPath, err);
+    // Show error overlay in mission view
+    let errDiv = document.getElementById('mission-model-error');
+    if (!errDiv) {
+      errDiv = document.createElement('div');
+      errDiv.id = 'mission-model-error';
+      errDiv.style.position = 'absolute';
+      errDiv.style.top = '0';
+      errDiv.style.left = '0';
+      errDiv.style.width = '100%';
+      errDiv.style.height = '100%';
+      errDiv.style.background = 'rgba(30,30,40,0.92)';
+      errDiv.style.display = 'flex';
+      errDiv.style.flexDirection = 'column';
+      errDiv.style.alignItems = 'center';
+      errDiv.style.justifyContent = 'center';
+      errDiv.style.zIndex = 1000;
+      errDiv.style.color = '#ff6666';
+      errDiv.style.fontSize = '1.2em';
+      errDiv.innerHTML = `<b>Failed to load satellite model.</b><br>Path: <code>${satPath}</code><br>${err.message || err}`;
+      missionDiv.appendChild(errDiv);
+    }
+  });
+}
+
+// --- Custom Calendar Logic ---
+function renderCustomCalendar(selectedDate) {
+  const calendarDiv = document.getElementById('custom-calendar');
+  if (!calendarDiv) return;
+  // State
+  let today = new Date();
+  let year = selectedDate ? selectedDate.getFullYear() : today.getFullYear();
+  let month = selectedDate ? selectedDate.getMonth() : today.getMonth();
+  let selDay = selectedDate ? selectedDate.getDate() : null;
+
+  function updateCalendar(y, m, sel) {
+    calendarDiv.innerHTML = '';
+    // Header
+    const header = document.createElement('div');
+    header.className = 'calendar-header';
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '<';
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '>';
+    const monthYear = document.createElement('span');
+    monthYear.textContent = `${today.toLocaleString('default', { month: 'long' })} ${y}`;
+    header.appendChild(prevBtn);
+    header.appendChild(monthYear);
+    header.appendChild(nextBtn);
+    calendarDiv.appendChild(header);
+    // Weekdays
+    const weekdays = ['S','M','T','W','T','F','S'];
+    const grid = document.createElement('div');
+    grid.className = 'calendar-grid';
+    weekdays.forEach(d => {
+      const wd = document.createElement('div');
+      wd.className = 'calendar-weekday';
+      wd.textContent = d;
+      grid.appendChild(wd);
+    });
+    // Days
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'calendar-day disabled';
+      grid.appendChild(empty);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const day = document.createElement('div');
+      day.className = 'calendar-day';
+      day.textContent = d;
+      if (sel === d) day.classList.add('selected');
+      if (y === today.getFullYear() && m === today.getMonth() && d === today.getDate()) day.classList.add('today');
+      day.onclick = () => {
+        updateCalendar(y, m, d);
+        // Set selected date and show launch button
+        const launchBtnContainer = document.getElementById('launch-btn-container');
+        if (launchBtnContainer) {
+          launchBtnContainer.innerHTML = '<button class="launch-btn" id="launch-btn">Launch</button>';
+          document.getElementById('launch-btn').onclick = () => {
+            window.__missionPrefs = window.__missionPrefs || {};
+            window.__missionPrefs.date = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            // Show loading overlay and launch as before
+            let loadingOverlay = document.getElementById('loading-overlay');
+            if (!loadingOverlay) {
+              loadingOverlay = document.createElement('div');
+              loadingOverlay.id = 'loading-overlay';
+              loadingOverlay.style.position = 'fixed';
+              loadingOverlay.style.top = 0;
+              loadingOverlay.style.left = 0;
+              loadingOverlay.style.width = '100vw';
+              loadingOverlay.style.height = '100vh';
+              loadingOverlay.style.background = 'rgba(20,22,24,0.85)';
+              loadingOverlay.style.display = 'flex';
+              loadingOverlay.style.alignItems = 'center';
+              loadingOverlay.style.justifyContent = 'center';
+              loadingOverlay.style.zIndex = 10000;
+              loadingOverlay.style.color = '#fff';
+              loadingOverlay.style.fontSize = '2em';
+              loadingOverlay.innerHTML = '<span>Preparing Mission...</span>';
+            }
+            document.body.appendChild(loadingOverlay);
+            setTimeout(() => {
+              document.getElementById('satellite-page').classList.add('hidden');
+              document.getElementById('mission-page').classList.remove('hidden');
+              const smToggle = document.getElementById('sm-toggle');
+              if (smToggle) smToggle.disabled = false;
+              missionLaunched = true;
+              if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+              renderMissionScene(window.__missionPrefs);
+            }, 1200);
+          };
+        }
+      };
+      grid.appendChild(day);
+    }
+    calendarDiv.appendChild(grid);
+    // Month navigation
+    prevBtn.onclick = () => {
+      let newMonth = m - 1;
+      let newYear = y;
+      if (newMonth < 0) { newMonth = 11; newYear--; }
+      updateCalendar(newYear, newMonth, null);
+      const launchBtnContainer = document.getElementById('launch-btn-container');
+      if (launchBtnContainer) launchBtnContainer.innerHTML = '';
+    };
+    nextBtn.onclick = () => {
+      let newMonth = m + 1;
+      let newYear = y;
+      if (newMonth > 11) { newMonth = 0; newYear++; }
+      updateCalendar(newYear, newMonth, null);
+      const launchBtnContainer = document.getElementById('launch-btn-container');
+      if (launchBtnContainer) launchBtnContainer.innerHTML = '';
+    };
+  }
+  updateCalendar(year, month, selDay);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // ...existing code...
+  // Custom calendar
+  renderCustomCalendar();
+  // ...existing code...
 });

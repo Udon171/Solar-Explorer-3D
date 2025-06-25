@@ -5,96 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar Explorer 3D</title>
     <link rel="stylesheet" href="components/style.css">
-    <script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
+    <!-- Remove Spacekit.js -->
+    <!-- <script src="https://typpo.github.io/spacekit/build/spacekit.js"></script> -->
+    <!-- Add Three.js -->
+    <script type="module">
+      import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
+        window.THREE = THREE;
+    </script>
+    <!-- Placeholder for Orbitronica integration -->
+    <!-- <script src="components/orbitronica/orbitronica.js"></script> -->
 </head>
 <body>
     <div class="game-container">
+        <!-- Top Bar -->
         <div class="top-bar">
-            <button class="tab active" id="satellite-tab">Satellite</button>
-            <button class="tab" id="mission-tab">Mission</button>
-        </div>
-        <div class="centerpiece">
-            <img src="assets/textures/placeholder.jpg" alt="Satellite" class="satellite-image" id="satellite-image">
-            <div class="options-panel">
-                <div class="panel" id="sat-options">
-                    <h3>Satellite Options</h3>
-                    <!-- Satellite config options go here -->
-                </div>
-                <div class="panel" id="mission-options">
-                    <h3>Mission Options</h3>
-                    <!-- Mission config options go here -->
-                </div>
+            <button id="main-menu-btn" class="burger-menu" aria-label="Main Menu"></button>
+            <div class="top-bar-title">Build your Satellite...</div>
+            <div class="sm-switch">
+                <label class="switch">
+                    <input type="checkbox" id="sm-toggle" checked>
+                    <span class="slider"></span>
+                    <span class="switch-label s-label">S</span>
+                    <span class="switch-label m-label">M</span>
+                </label>
             </div>
         </div>
-        <div class="mission-control">
-            <h2>Mission Control</h2>
-            <form id="mission-form">
-                <div class="form-group">
-                    <label for="planet-select">Target Planet:</label>
-                    <select id="planet-select" required>
-                        <option value="mars">Mars</option>
-                        <option value="venus">Venus</option>
-                        <option value="mercury">Mercury</option>
-                        <option value="earth">Earth</option>
-                        <option value="jupiter">Jupiter</option>
-                        <option value="saturn">Saturn</option>
-                        <option value="uranus">Uranus</option>
-                        <option value="neptune">Neptune</option>
-                        <option value="dwarf_planets">Dwarf Planets</option>
-                        <option value="small_bodies">Small Bodies</option>
+        <div class="main-layout" id="satellite-page">
+            <div class="satellite-main-section">
+            <div class="sat-left-controls">
+                <div class="sat-arrows-row">
+                <button class="triangle-btn left" aria-label="Rotate Left">&#9664;</button>
+                <button class="triangle-btn right" aria-label="Rotate Right">&#9654;</button>
+                </div>
+                <div class="sat-slider-row">
+                <input type="range" id="sat-slider" min="0" max="100" value="50">
+                </div>
+                <button class="progress-btn" id="progress-btn">Progress</button>
+            </div>
+            <div class="sat-center-view">
+                <div class="satellite-select-row">
+                    <label for="satellite-select" style="color:#fff;font-weight:600;margin-right:0.5em;">Satellite:</label>
+                    <select id="satellite-select">
+                        <option value="AcrimSAT">AcrimSAT</option>
+                        <option value="Aura">Aura</option>
+                        <option value="JWS">JWS</option>
+                        <option value="Voyager 1">Voyager 1</option>
+                        <option value="Voyager 2">Voyager 2</option>
                     </select>
                 </div>
-                
-                <div class="form-group">
-                    <label>Instruments:</label>
-                    <div class="instruments-grid">
-                        <label class="instrument-checkbox">
-                            <input type="checkbox" id="camera">
-                            <span>Camera</span>
-                        </label>
-                        <label class="instrument-checkbox">
-                            <input type="checkbox" id="spectrometer">
-                            <span>Spectrometer</span>
-                        </label>
-                        <label class="instrument-checkbox">
-                            <input type="checkbox" id="radar">
-                            <span>Radar</span>
-                        </label>
-                        <label class="instrument-checkbox">
-                            <input type="checkbox" id="gravitometer">
-                            <span>Gravitometer</span>
-                        </label>
-                        <label class="instrument-checkbox">
-                            <input type="checkbox" id="multiSpectral">
-                            <span>Multi-Spectral Imager</span>
-                        </label>
-                    </div>
+                <div id="simulation"></div>
+            </div>
+            <div class="sat-right-controls">
+                <button class="sat-control-btn">A</button>
+                <button class="sat-control-btn">B</button>
+                <button class="sat-control-btn">C</button>
+                <button class="sat-control-btn">D</button>
+                <button class="sat-control-btn">E</button>
+                <button class="sat-control-btn">F</button>
+            </div>
+            </div>
+            <div class="sat-monitor-panels">
+            <div class="monitor-panel" id="target-planet-panel">
+                <h3>Target Planet</h3>
+                <div class="planet-select-row">
+                    <button class="planet-arrow-btn" id="planet-left-btn" aria-label="Previous Planet">&#9664;</button>
+                    <img id="planet-image" src="assets/textures/earth/earth.jpg" alt="Planet" style="width:100px;height:100px;object-fit:cover;border-radius:50%;margin:0 1em;box-shadow:0 2px 8px #000a;">
+                    <button class="planet-arrow-btn" id="planet-right-btn" aria-label="Next Planet">&#9654;</button>
                 </div>
-
-                <div class="form-group">
-                    <label for="launch-date">Launch Date:</label>
-                    <input type="date" id="launch-date" required>
-                </div>
-
-                <button type="submit" class="launch-btn">Launch Mission</button>
-            </form>
-        </div>
-
-        <div class="simulation-container">
-            <div id="simulation"></div>
-            <div class="simulation-controls">
-                <button id="pause-btn">Pause</button>
-                <div class="speed-control">
-                    <label for="simulation-speed">Speed:</label>
-                    <input type="range" id="simulation-speed" min="1" max="10" value="1">
-                    <span id="speed-value">1x</span>
-                </div>
+                <div id="planet-name" style="text-align:center;font-weight:600;font-size:1.2em;margin-top:0.5em;">Earth</div>
+            </div>
+            <div class="monitor-panel" id="inventory-panel">
+                <h3>Inventory</h3>
+            <!-- Inventory info -->
+            </div>
+            <div class="monitor-panel" id="launch-calendar-panel">
+                <h3>Launch Calendar</h3>
+                <div id="custom-calendar"></div>
+                <div id="launch-btn-container" style="text-align:center;margin-top:1.5em;"></div>
+            </div>
             </div>
         </div>
-
-        <div id="instrument-view" class="instrument-panel" style="display: none">
-            <h3>Instrument Data</h3>
-            <div id="instrument-content"></div>
+        <div class="main-layout hidden" id="mission-page">
+            <div class="mission-svg-container">
+                <img src="assets/resources/Solar System Odyssey-mission.svg" alt="Mission Control Wireframe" style="width:100%;max-width:1100px;display:block;margin:2em auto;box-shadow:0 4px 32px 0 rgba(31,38,135,0.13);border-radius:18px;background:#fff;">
+            </div>
         </div>
     </div>
     <script type="module" src="components/script.js"></script>

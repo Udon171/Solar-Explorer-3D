@@ -3,7 +3,6 @@
 **Solar System Odyssey** is an interactive web-based simulation game where you plan, launch, and manage interplanetary missions in a realistic 3D solar system. Visualize orbits, plan Hohmann transfers, and operate scientific instruments as you explore planets and other celestial bodies.
 
 ---
-
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -21,6 +20,8 @@
 - [UI – User Interface](#ui--user-interface)
 - [UX – User Experience](#ux--user-experience)
 - [Saving Mission Progress – Web Memory Solution](#saving-mission-progress--web-memory-solution)
+- [Major Development Diary](#major-development-diary)
+- [Wireframe Images & Textures](#wireframe-images--textures)
 - [Credits](#credits)
 - [License](#license)
 
@@ -34,7 +35,7 @@ Solar System Odyssey is a JavaScript-based game where players plan and execute s
 
 ## Features
 
-- 🌞 Real-time 3D solar system visualization using Spacekit.js and NASA JPL Horizons API
+- 🌞 Real-time 3D solar system visualization using Three.js (Orbitronica style) and NASA JPL Horizons API
 - 🚀 Mission planning with launch window and phase angle validation
 - 🛰️ Satellite transfer orbit simulation and trajectory visualization
 - 🧪 Operate scientific instruments: Camera, Spectrometer, Radar, Gravitometer, Multi-Spectral Imager
@@ -88,7 +89,7 @@ Solar System Odyssey is a JavaScript-based game where players plan and execute s
 - **JavaScript:** Core logic for mission planning, trajectory calculations, and simulation.
 - **HTML:** Structure for the user interface, including mission planning and instrument views.
 - **CSS:** Styling for an intuitive and visually appealing interface.
-- **Spacekit.js:** 3D space visualizations and solar system body presets.
+- **Three.js:** 3D space visualizations and solar system body rendering (Orbitronica-style).
 - **NASA Data:** Images and scientific data for planets and instruments.
 - **NASA JPL Horizons API:** For accurate, real-time planetary positions and ephemeris data.
 
@@ -263,7 +264,7 @@ fetch('https://ssd-api.jpl.nasa.gov/horizons.api?format=json&COMMAND=499&OBJ_DAT
 ### Example Integration in This Project
 
 - Use Horizons API to fetch up-to-date positions for planets at mission planning time.
-- Optionally, update planet positions in the Spacekit.js simulation using the returned vectors.
+- Optionally, update planet positions in the Three.js simulation using the returned vectors.
 - Use the API to validate launch windows or calculate more precise transfer orbits.
 
 ### Resources
@@ -278,8 +279,7 @@ fetch('https://ssd-api.jpl.nasa.gov/horizons.api?format=json&COMMAND=499&OBJ_DAT
 
 ## Dependencies
 
-- [Spacekit.js](https://typpo.github.io/spacekit/) (CDN)
-- [Three.js](https://threejs.org/) (via Spacekit)
+- [Three.js](https://threejs.org/)
 - NASA JPL [Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html)
 - No build tools required; runs in modern browsers.
 
@@ -287,7 +287,7 @@ fetch('https://ssd-api.jpl.nasa.gov/horizons.api?format=json&COMMAND=499&OBJ_DAT
 
 ## Known Issues
 
-- Some assets (e.g., textures, sprites) are loaded from external URLs and may 404 if unavailable.
+- Some assets (e.g., textures, sprites) are loaded from external URLs and may 404 if unavailable. (Spacekit.js dependency removed; all core features now use local or NASA assets.)
 - Not all instrument visualizations are fully implemented (stubbed for demo).
 - Only Mars and Venus are currently supported as mission targets.
 
@@ -431,9 +431,75 @@ To ensure players can save their mission progress and resume where they left off
 
 ---
 
+## Major Development Diary
+
+### Project Genesis: README Creation & Vision (April 2025)
+
+The Solar System Odyssey project began with the creation of a comprehensive README file, laying the foundation for a robust, scalable, and educational space simulation game. The initial focus was on designing an advanced folder structure to support modular development, maintainability, and future expansion. Key goals included:
+
+- **Engine Selection:**  
+    Early research compared JavaScript-based 3D engines (Three.js, Babylon.js, Spacekit.js). The initial plan favored Spacekit.js for rapid prototyping, but with an eye toward future migration to Three.js for greater control and extensibility.
+
+- **Folder Structure:**  
+    The project was architected with clear separation of concerns:  
+    - `components/` for core logic, UI, data, and utilities  
+    - `assets/` for textures, icons, and static resources  
+    - `resources/information/` for planet-specific info and secrets  
+    - Modular subfolders for each major system (game logic, UI, data, helpers)
+
+- **UI/UX Blueprint:**  
+    The README detailed a modern, glassmorphic UI with floating panels, high-contrast controls, and a clean, immersive layout. The UX plan emphasized accessibility, two-click navigation, and a seamless flow from mission planning to simulation.
+
+- **Missing Pieces:**  
+    At this stage, the project lacked finalized wireframes, 3D models, and textures. The README served as a living design document, setting the scene for future development and providing a roadmap for contributors and AI agents to execute the vision.
+
+- **Timeline & Milestones:**  
+    The initial roadmap targeted a playable prototype within 8 weeks, with early deliverables including the core simulation engine, mission planner, and basic UI. The README established a clear direction, enabling rapid onboarding and focused progress.
+
+- **Vibe:**  
+    The project’s inception was marked by excitement and ambition, with a strong emphasis on educational value, scientific accuracy, and an engaging player experience. The README captured this spirit, serving as both a technical guide and a motivational anchor for the team.
+
+---
+
+### Migration from Spacekit.js to Three.js (June 2025)
+
+During development, we encountered persistent 404 errors and CDN/asset issues with Spacekit.js, which was previously used for 3D solar system visualization. These issues affected reliability and asset loading, especially for external users and in production environments. After evaluating alternatives, we migrated the visualization engine to a direct Three.js implementation, inspired by the Orbitronica style. This change:
+
+- Eliminated dependency on Spacekit.js and its CDN.
+- Improved control over 3D rendering, asset management, and interactivity.
+- Allowed for more robust integration of NASA textures and custom UI overlays.
+- Enabled future extensibility for advanced features (e.g., real-time planetary positions, custom shaders, and more detailed mission simulation).
+
+All code, UI, and documentation have been updated to reflect this migration. If you previously used or contributed to the Spacekit.js version, please note that all 3D logic is now handled in `components/orbitronica-init.js` and related modules using Three.js directly.
+
+[Back to Contents](#table-of-contents)
+---
+
+### Wireframe Images & Textures
+
+Below are SVG wireframes illustrating the planned UI for Mission Control and Satellite Build/Progress screens. These serve as visual guides for layout and user flow.
+
+#### Mission Control UI Wireframe
+
+<div style="background: #fff; padding: 16px; display: inline-block;">
+    <img src="assets/resources/Solar%20System%20Odyssey-mission.svg" alt="Mission Control Wireframe" style="background: #fff; display: block; max-width: 100%;">
+</div>
+
+#### Satellite Build/Progress UI Wireframe
+
+<div style="background: #fff; padding: 16px; display: inline-block;">
+    <img src="assets/resources/Solar%20System%20Odyssey-satellite.svg" alt="Satellite Build Wireframe" style="background: #fff; display: block; max-width: 100%;">
+</div>
+
+> These wireframes are for reference and will guide the implementation of the glassmorphic UI and control panels described above.
+
+[Back to Contents](#table-of-contents)
+
+---
+
 ## Credits
 
-- Solar system visualization powered by [Spacekit.js](https://typpo.github.io/spacekit/)
+- Solar system visualization powered by [Three.js](https://threejs.org/)
 - NASA planetary data and images via [Photojournal](https://photojournal.jpl.nasa.gov/) and [Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html)
 - Developed by David Wells
 
